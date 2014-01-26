@@ -34,7 +34,7 @@ block append content
                 td(mac-cell-template="")
                   span {{cell.value()}}
 
-        pre.prettyprint.linenums.
+        pre(ng-non-bindable).prettyprint.linenums.
           &lt;table mac-table  mac-table-columns=&quot;dynamic&quot; mac-table-resizable-columns mac-table-reorderable-columns class=&quot;table mac-table-default&quot;&gt;
             &lt;thead mac-table-section=&quot;header&quot; mac-table-section-blank-row&gt;
               &lt;tr mac-table-row&gt;
@@ -50,7 +50,7 @@ block append content
             &lt;/tbody&gt;
           &lt;/table&gt;
 
-        pre.prettyprint.linenums.
+        pre(ng-non-bindable).prettyprint.linenums.
           $scope.macGyverSeasonOne = [
             {
               \'No.\': \'1\',
@@ -105,32 +105,32 @@ block append content
                   li(ng-repeat="model in selectedModels | orderBy:'Title'")
                     span {{model["Title"]}}
 
-        pre.prettyprint.linenums.
+        pre(ng-non-bindable).prettyprint.linenums.
           &lt;table
-              mac-table
-              mac-table-columns=&quot;[\'No.\', \'Title\', \'Original air date\']&quot;
-              mac-table-resizable-columns
-              mac-table-reorderable-columns
-              class=&quot;table mac-table-default&quot;&gt;
+            mac-table
+            mac-table-columns=&quot;[\'No.\', \'Title\', \'Original air date\']&quot;
+            mac-table-resizable-columns
+            mac-table-reorderable-columns
+            class=&quot;table mac-table-default&quot;&gt;
             &lt;thead mac-table-section=&quot;header&quot; mac-table-section-blank-row&gt;
               &lt;tr mac-table-row&gt;
                 &lt;th mac-cell-template=&quot;&quot; mac-column-width=&quot;auto&quot;&gt;&lt;span&gt;{{cell.column.colName}}&lt;/span&gt;&lt;/th&gt;
               &lt;/tr&gt;
             &lt;/thead&gt;
             &lt;tbody
-                mac-table-section=&quot;body&quot;
-                mac-table-section-models=&quot;macGyverSeasonOne | filter: query&quot;
-                mac-table-section-selected-models=&quot;$parent.$parent.selectedModels&quot;&gt;
+              mac-table-section=&quot;body&quot;
+              mac-table-section-models=&quot;macGyverSeasonOne | filter: query&quot;
+              mac-table-section-selected-models=&quot;$parent.$parent.selectedModels&quot;&gt;
               &lt;tr
-                  mac-table-row
-                  ng-class = &quot;{selected: row.selected}&quot;&gt;
+                mac-table-row
+                ng-class = &quot;{selected: row.selected}&quot;&gt;
                 &lt;td mac-cell-template=&quot;No.&quot; mac-table-selectable=&quot;true&quot;&gt;&lt;span&gt;{{cell.value()}}&lt;/span&gt;&lt;/td&gt;
                 &lt;td mac-cell-template=&quot;&quot;&gt;&lt;span&gt;{{cell.value()}}&lt;/span&gt;&lt;/td&gt;
               &lt;/tr&gt;
             &lt;/tbody&gt;
           &lt;/table&gt;
 
-        pre.prettyprint.linenums.
+        pre(ng-non-bindable).prettyprint.linenums.
           $scope.selectedModels = []
 
           $scope.unselectAll = -&gt;
@@ -148,4 +148,70 @@ block append content
               models.push model unless model in models
 
             $scope.selectedModels = models
+
+        .docs-example
+          h3 Expanding Rows
+          p Click rows to expand
+
+          table.table.mac-table-default(
+            mac-table
+            mac-table-columns="['No.', 'Title', 'Original air date']"
+            mac-table-resizable-columns=""
+            mac-table-reorderable-columns=""
+          )
+            thead(mac-table-section="header", mac-table-section-blank-row)
+              tr(mac-table-row)
+                th(mac-cell-template="", mac-column-width="auto")
+                  span {{cell.column.colName}}
+
+            tbody(
+              mac-table-section        = "body"
+              mac-table-section-models = "macGyverSeasonOne"
+            )
+              tr(
+                mac-table-row-start
+                ng-click = "row.open = !row.open"
+                ng-class = "{selected: row.open}"
+              )
+                td(mac-cell-template="")
+                  span {{cell.value()}}
+              tr(
+                ng-if = "row.open"
+                mac-table-row-end
+              )
+                td(colspan="{{table.columns.length}}") 
+                  h4 Model JSON
+                  pre {{toJSON(row.model)}}
+
+        pre(ng-non-bindable).prettyprint.linenums.
+          &lt;table
+            mac-table
+            mac-table-columns=&quot;[\'No.\', \'Title\', \'Original air date\']&quot;
+            mac-table-resizable-columns
+            mac-table-reorderable-columns
+            class=&quot;table mac-table-default&quot;&gt;
+            &lt;thead mac-table-section=&quot;header&quot; mac-table-section-blank-row&gt;
+              &lt;tr mac-table-row&gt;
+                &lt;th mac-cell-template=&quot;&quot; mac-column-width=&quot;auto&quot;&gt;&lt;span&gt;{{cell.column.colName}}&lt;/span&gt;&lt;/th&gt;
+              &lt;/tr&gt;
+            &lt;/thead&gt;
+            &lt;tbody
+              mac-table-section=&quot;body&quot;
+              mac-table-section-models=&quot;macGyverSeasonOne&quot;&gt;
+              &lt;tr
+                mac-table-row-start
+                ng-click=&quot;row.open = !row.open&quot;
+                ng-class=&quot;{selected: row.open}&quot;&gt;
+                &lt;td mac-cell-template=&quot;&quot;&gt;&lt;span&gt;{{cell.value()}}&lt;/span&gt;&lt;/td&gt;
+              &lt;/tr&gt;
+              &lt;tr
+                ng-if=&quot;row.open&quot;
+                mac-table-row-end&gt;
+                &lt;td colspan=&quot;{{table.columns.length}}&quot;&gt;
+                  &lt;h4&gt;Model JSON&lt;/h4&gt;
+                  &lt;pre&gt;{{toJSON(row.model)}}&lt;/pre&gt;
+                &lt;/td&gt;
+              &lt;/tr&gt;
+            &lt;/tbody&gt;
+          &lt;/table&gt;
 

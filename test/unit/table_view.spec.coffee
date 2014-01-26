@@ -306,6 +306,29 @@ describe "Table View", ->
       it "Should set the width automatically", ->
         expect(element.find("[mac-cell-template]").first().attr("width")).toBe "50%"
 
+      describe "Row Start & End", ->
+
+        beforeEach ->
+          startEndTemplate =
+          """<table mac-table mac-table-columns="tableColumns">
+              <tbody mac-table-section="body" mac-table-section-models="tableData">
+                <tr mac-table-row-start>
+                  <td mac-cell-template>{{cell.value()}}</td>
+                </tr>
+                <tr mac-table-row-end data-end-marker>
+                  <td>extra row</td>
+                </tr>
+              </tbody>
+             </table
+          """
+
+          element = $compile(startEndTemplate)(scope)
+          scope.$apply()
+
+        it "Should render the end row for each model in tableData", ->
+          expect(element.find("[data-end-marker]").length).toBe models.length
+          expect(element.find("tr").length).toBe models.length * 2
+
       describe "Section Controllers", ->
 
         beforeEach inject (TableSectionController) ->

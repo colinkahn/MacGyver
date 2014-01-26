@@ -251,6 +251,11 @@ module.controller "ExampleController", [
       models.push model unless model in models
 
     $scope.selectedModels = models
+
+  # Table Expandable Row
+  
+  $scope.toJSON = (obj) ->
+    angular.toJson obj, true
 ]
 
 window.prettyPrint && prettyPrint()

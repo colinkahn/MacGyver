@@ -60,10 +60,33 @@ angular.module("Mac").directive "macTable", [ "MacTableController", (MacTableCon
         .attr("mac-reorderable", "[mac-cell-template]")
         .attr("mac-reorderable-columns", "")
 
-    # Generate our boilerplate ng-repeat on rows if there isn't on set already
-    element.find("[mac-table-row]")
-      .not("[mac-table-row][ng-repeat]")
-      .attr("ng-repeat", "row in section.rows")
+    # Adds or modifies ng-repeat on each mac-table-row
+    # Handles -start as if it were actually added to the ng-repeat
+    element.find("[mac-table-row], [mac-table-row-start]").each ->
+      $el         = $(this)
+      isStart     = $el.is("[mac-table-row-start]")
+      isNgRepeat  = $el.is("ng-repeat")
+      ngRepeatExp =
+        if isNgRepeat
+          $el.attr("ng-repeat")
+        else
+          "row in section.rows"
+
+      if isStart
+        $el
+          .attr("ng-repeat-start", ngRepeatExp)
+          .attr("mac-table-row", "")
+          .removeAttr("mac-table-row-start")
+
+        $el.removeAttr("ng-repeat") if isNgRepeat
+
+      else if not isNgRepeat
+        $el.attr("ng-repeat", ngRepeatExp)
+
+    # Add ng-repeat-end to any rows that have the mac-table-row-end attribute
+    element.find("[mac-table-row-end]")
+      .attr("ng-repeat-end", true)
+      .removeAttr("mac-table-row-end")
 
     # Generating the boilerplate mac-column-width calculations is a drag,
     # lets do that automatically looking for "auto" in mac-column-width
