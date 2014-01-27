@@ -9,8 +9,11 @@ angular.module("Mac").factory "TableSectionController", [ ->
 ]
 
 angular.module("Mac").factory "TableRow", ->
+  guid = 0
+
   class TableRow
     constructor: (@section, @model, @cells = [], @cellsMap = {}) ->
+      @id = "$R#{guid++}"
 
     toJSON: ->
       cells: @cells
@@ -184,8 +187,6 @@ angular.module("Mac").factory "Table", [
           @columns        = []
           @columnsCtrl    = new TableColumnsController(this)
           @rowsCtrl       = new TableRowsController(this)
-          @cachedRows     = []
-          @cachedModels   = []
           @dynamicColumns = columns is 'dynamic'
           if not @dynamicColumns
             @columnsCtrl.set(columns)
@@ -214,26 +215,12 @@ angular.module("Mac").factory "Table", [
 
             for row in section.rows
               index = models.indexOf row.model
-              if index is -1
-                # Cache the row for possible retrieval later if it isn't already
-                # cached
-                unless row in @cachedRows
-                  removedRowIndex                = @cachedRows.length
-                  @cachedRows[removedRowIndex]   = row
-                  @cachedModels[removedRowIndex] = row.model
-              else
+              unless index is -1
                 orderedRows[index] = row
                 tableModels[index] = row.model
 
             for model, index in models when model not in tableModels
-              cachedIndex        = @cachedModels.indexOf model
-              orderedRows[index] =
-                # Use the cached version of the row if possible, this should
-                # speed up ng-repeat
-                if cachedIndex isnt -1
-                  @cachedRows[cachedIndex]
-                else
-                  @rowsCtrl.make section, model
+              orderedRows[index] = @rowsCtrl.make section, model
 
             section.rows = orderedRows
 

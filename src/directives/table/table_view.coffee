@@ -60,10 +60,12 @@ angular.module("Mac").directive "macTable", [ "MacTableController", (MacTableCon
         .attr("mac-reorderable", "[mac-cell-template]")
         .attr("mac-reorderable-columns", "")
 
+    ###
     # Generate our boilerplate ng-repeat on rows if there isn't on set already
     element.find("[mac-table-row]")
       .not("[mac-table-row][ng-repeat]")
       .attr("ng-repeat", "row in section.rows")
+    ###
 
     # Generating the boilerplate mac-column-width calculations is a drag,
     # lets do that automatically looking for "auto" in mac-column-width

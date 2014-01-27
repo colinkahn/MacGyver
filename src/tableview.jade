@@ -12,18 +12,16 @@ block append content
           table.table.mac-table-default(
             mac-table
             mac-table-columns="dynamic"
-            mac-table-resizable-columns=""
-            mac-table-reorderable-columns=""
           )
             thead(mac-table-section="header", mac-table-section-blank-row)
               tr(mac-table-row)
-                th(mac-cell-template="No.", mac-column-width="5%")
+                th(mac-cell-template="No.")
                   span {{cell.column.colName}}
 
-                th(mac-cell-template="Title", mac-column-width="35%")
+                th(mac-cell-template="Title")
                   span {{cell.column.colName}}
 
-                th(mac-cell-template="", mac-column-width="auto")
+                th(mac-cell-template="")
                   span {{cell.column.colName}}
 
             tbody(
@@ -67,13 +65,11 @@ block append content
             .span6
               table.table.mac-table-default(
                 mac-table
-                mac-table-columns="['No.', 'Title', 'Original air date']"
-                mac-table-resizable-columns=""
-                mac-table-reorderable-columns=""
+                mac-table-columns="columns"
               )
                 thead(mac-table-section="header", mac-table-section-blank-row)
                   tr(mac-table-row)
-                    th(mac-cell-template="", mac-column-width="auto")
+                    th(mac-cell-template="")
                       span {{cell.column.colName}}
 
                 tbody(
@@ -98,6 +94,8 @@ block append content
                 li: a(href="", ng-click="selectAll()") Select All
                 li: a(href="", ng-click="unselectAll()") Unselect All
                 li: a(href="", ng-click="selectRandom()") Select Random
+                li: a(href="", ng-click="removeColumn()") Remove Column
+                li: a(href="", ng-click="addColumn()") Add Column
 
               div(ng-show="selectedModels.length")
                 h5 You've selected
@@ -158,18 +156,16 @@ block append content
           table.table.mac-table-default(
             mac-table
             mac-table-columns="['No.', 'Title', 'Original air date']"
-            mac-table-resizable-columns=""
-            mac-table-reorderable-columns=""
           )
             thead(mac-table-section="header", mac-table-section-blank-row)
               tr(mac-table-row)
-                th(mac-cell-template="No.", mac-column-width="5%")
+                th(mac-cell-template="No.")
                   span {{cell.column.colName}}
 
-                th(mac-cell-template="Title", mac-column-width="35%")
+                th(mac-cell-template="Title")
                   span {{cell.column.colName}}
 
-                th(mac-cell-template="", mac-column-width="auto")
+                th(mac-cell-template="")
                   span {{cell.column.colName}}
 
             tbody(

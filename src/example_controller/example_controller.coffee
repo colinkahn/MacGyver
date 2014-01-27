@@ -256,6 +256,19 @@ module.controller "ExampleController", [
   $scope.sortByName = (model) ->
     model.Title
 
+  # Table Selectable Rows
+  
+  $scope.columns = ['No.', 'Title', 'Original air date']
+
+  removedColumns = []
+
+  $scope.removeColumn = ->
+    removedColumns.push $scope.columns.pop()
+
+  $scope.addColumn = ->
+    console.log removedColumns
+    $scope.columns.push removedColumns.pop()
+
   # Table Performance
   $scope.perfModels = []
 
