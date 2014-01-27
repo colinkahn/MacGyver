@@ -9,8 +9,9 @@ module.controller "modalController", ["$scope", "modal", ($scope, modal) ->
 module.controller "ExampleController", [
   "$scope"
   "$window"
+  "$timeout"
   "keys"
-($scope, $window, keys) ->
+($scope, $window, $timeout, keys) ->
   $scope.keys          = ({key, code} for key, code of keys)
   $scope.selectOptions = [
     {value: 1, text: "text1"}
@@ -251,6 +252,36 @@ module.controller "ExampleController", [
       models.push model unless model in models
 
     $scope.selectedModels = models
+
+  $scope.sortByName = (model) ->
+    model.Title
+
+  # Table Performance
+  $scope.perfModels = []
+
+  $scope.perfIntervalCallback = ->
+    index = $scope.perfModels.length
+    $scope.perfModels[index] = {
+      'No.': '1',
+      'Title': '"Pilot"',
+      'Directed by': 'Jerrold Freedman',
+      'Written by': 'Thackary Pallor',
+      'Original air date': 'September 29, 1985'
+    }
+    $timeout $scope.perfIntervalCallback, 50
+
+  addModels = true
+
+  $scope.perfIntervalCallbackTwo = ->
+    if addModels
+      $scope.perfModels = $scope.macGyverSeasonOne
+    else
+      $scope.perfModels = []
+
+    addModels = not addModels
+
+    $timeout $scope.perfIntervalCallbackTwo, 50
+
 ]
 
 window.prettyPrint && prettyPrint()

@@ -184,6 +184,8 @@ angular.module("Mac").factory "Table", [
           @columns        = []
           @columnsCtrl    = new TableColumnsController(this)
           @rowsCtrl       = new TableRowsController(this)
+          @cachedRows     = []
+          @cachedModels   = []
           @dynamicColumns = columns is 'dynamic'
           if not @dynamicColumns
             @columnsCtrl.set(columns)
@@ -201,31 +203,39 @@ angular.module("Mac").factory "Table", [
           @loadModels     sectionName, models     if models
 
         loadModels: (sectionName, models) ->
-          models = convertObjectModelsToArray models
+          section = @sections[sectionName]
+          models  = convertObjectModelsToArray models
 
           # Check if we're working with an existing section, if so we want to
           # intelligently insert / remove only what we need to
-          if @sections[sectionName]?.rows.length
-            tableModels  = []
-            toBeRemoved  = []
-            toBeInserted = []
+          if section?.rows.length
+            orderedRows = []
+            tableModels = []
 
-            # Find which items need to be removed
-            for row, index in @sections[sectionName].rows
-              if row.model not in models
-                toBeRemoved.push [sectionName, index]
+            for row in section.rows
+              index = models.indexOf row.model
+              if index is -1
+                # Cache the row for possible retrieval later if it isn't already
+                # cached
+                unless row in @cachedRows
+                  removedRowIndex                = @cachedRows.length
+                  @cachedRows[removedRowIndex]   = row
+                  @cachedModels[removedRowIndex] = row.model
               else
-                tableModels.push row.model
-
-            # We do this in reverse order to avoid changing the positions of the
-            # items as we remove them
-            toBeRemoved.reverse()
-            @remove.apply this, args for args in toBeRemoved
+                orderedRows[index] = row
+                tableModels[index] = row.model
 
             for model, index in models when model not in tableModels
-                toBeInserted.push [sectionName, model, index]
+              cachedIndex        = @cachedModels.indexOf model
+              orderedRows[index] =
+                # Use the cached version of the row if possible, this should
+                # speed up ng-repeat
+                if cachedIndex isnt -1
+                  @cachedRows[cachedIndex]
+                else
+                  @rowsCtrl.make section, model
 
-            @insert.apply this, args for args in toBeInserted
+            section.rows = orderedRows
 
           # New or empty section, load using set which will also create a section
           else
