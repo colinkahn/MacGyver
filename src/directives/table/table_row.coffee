@@ -14,11 +14,8 @@ angular.module("Mac").factory "MacTableRowController", [
     directiveHelpers
   ) ->
     class MacTableRowController
-
       repeatCells: (cells, rowElement, sectionController) ->
-        # Clear out our existing cell-templates
-        rowElement.children().remove()
-
+        # Gets the correct linker based on the cell column name
         linkerFactory = (cell) ->
           templateName =
             if cell.column.colName of sectionController.cellTemplates
@@ -29,8 +26,35 @@ angular.module("Mac").factory "MacTableRowController", [
           if template = sectionController.cellTemplates[templateName]
             return template[1]
 
-        # Repeat our cells
-        directiveHelpers.repeater cells, "cell", rowElement.scope(), rowElement, linkerFactory
+        # A condensed version of ng-repeat
+        # I doubt we'll need animations here, so they're left out
+
+        $scope         = rowElement.scope()
+        lastCellMap    = @lastCellMap or {}
+        nextCellMap    = {}
+        cursor         = null
+
+        for cell in cells
+          key         = cell.column.colName
+          cellElement = lastCellMap[key]
+
+          if cellElement
+            nextCellMap[key] = cellElement
+            delete lastCellMap[key]
+            rowElement[0].appendChild cellElement[0]
+          else
+            nScope      = $scope.$new()
+            nScope.cell = cell
+
+            if linkerFn = linkerFactory cell
+              clonedElement = linkerFn nScope, (clone) ->
+                rowElement[0].appendChild clone[0]
+                nextCellMap[key] = clone
+
+        for key, element of lastCellMap
+          element.remove()
+
+        @lastCellMap = nextCellMap
 ]
 
 angular.module("Mac").directive "macTableRow", [
