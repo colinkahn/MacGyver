@@ -101,7 +101,8 @@ macTable, macTableSection
 
 angular.module("Mac").directive "macTableSectionModels", ["$parse", ($parse) ->
   class MacTableSectionModelsCtrl
-    constructor: (@scope) ->
+    constructor: (@scope, @element) ->
+      @rowCellMaps = {}
 
     watch: (expression, sectionName) ->
       lastStringified = ""
@@ -117,16 +118,73 @@ angular.module("Mac").directive "macTableSectionModels", ["$parse", ($parse) ->
         if currStringified isnt lastStringified
           lastStringified = currStringified
 
-          @models = models
-          @scope.table.load sectionName, models
+          @models             = models
+          [rows, removedRows] = @scope.table.load sectionName, models
 
-          # This will cause our watcher to be fired again if something has changed
+          for row in rows
+            if row.$element
+              @element[0].appendChild row.$element[0]
+            else
+              row.$scope     = @scope.$new()
+              row.$scope.row = row
+
+              @rowTemplate row.$scope, (clone) =>
+                @element[0].appendChild clone[0]
+                row.$element = clone
+
+            # Gets the correct linker based on the cell column name
+            linkerFactory = (cell) =>
+              templateName =
+                if cell.column.colName of @cellTemplates
+                  cell.column.colName
+                else
+                  "?"
+
+              if template = @cellTemplates[templateName]
+                return template[1]
+
+            # Repeat each cell
+
+            cells       = row.cells
+            lastCellMap = @rowCellMaps[row.id] or {}
+            nextCellMap = {}
+
+            for cell in row.cells
+              key         = cell.column.colName
+              cellElement = lastCellMap[key]
+
+              if cellElement
+                nextCellMap[key] = cellElement
+                delete lastCellMap[key]
+                row.$element[0].appendChild cellElement[0]
+              else
+                nScope      = row.$scope.$new()
+                nScope.cell = cell
+
+                if linkerFn = linkerFactory cell
+                  clonedElement = linkerFn nScope, (clone) ->
+                    row.$element[0].appendChild clone[0]
+                    nextCellMap[key] = clone
+
+            $el.remove() for key, $el of lastCellMap
+
+            @rowCellMaps[row.id] = nextCellMap
+
+          for row in removedRows
+            row.$element.remove()
+            row.$scope.$destroy()
+            delete @rowCellMaps[row.id]
+
+          # This will cause our watcher to be fired again if something has
+          # changed
           return currStringified
 
   require:    ["^macTable", "macTableSection", "macTableSectionModels"]
-  controller: ["$scope", MacTableSectionModelsCtrl]
+  controller: ["$scope", "$element", MacTableSectionModelsCtrl]
 
   link: ($scope, $element, $attrs, controllers) ->
+    controllers[2].cellTemplates = controllers[1].cellTemplates
+    controllers[2].rowTemplate   = controllers[1].rowTemplate
     controllers[1].registerWatcher "macTableSectionModels", controllers[2]
 ]
 

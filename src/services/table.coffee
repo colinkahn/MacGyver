@@ -212,21 +212,28 @@ angular.module("Mac").factory "Table", [
           if section?.rows.length
             orderedRows = []
             tableModels = []
+            removedRows = []
 
             for row in section.rows
               index = models.indexOf row.model
-              unless index is -1
+              if index is -1
+                removedRows.push row
+              else
                 orderedRows[index] = row
                 tableModels[index] = row.model
 
             for model, index in models when model not in tableModels
               orderedRows[index] = @rowsCtrl.make section, model
 
+            # Overwrite old rows, rows not in orderedRows get GC'd?
             section.rows = orderedRows
+
+            return [section.rows, removedRows]
 
           # New or empty section, load using set which will also create a section
           else
             @rowsCtrl.set sectionName, models
+            return [section.rows, []]
 
         loadController: (sectionName, sectionController) ->
           @sections[sectionName].setController sectionController if sectionController
