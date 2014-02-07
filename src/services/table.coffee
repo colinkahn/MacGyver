@@ -68,24 +68,13 @@ angular.module("Mac").factory "tableComponents", [
       return new TableCell(row, column)
 ]
 
-angular.module("Mac").factory "dynamicColumnsFunction", ->
-  (models) ->
-    first   = models[0]
-    columns = (key for key, model of first)
-    @set(columns)
-
 angular.module("Mac").factory "TableColumnsController", [
   "tableComponents"
-  "dynamicColumnsFunction"
   (
     tableComponents
-    dynamicColumnsFunction
   ) ->
     class ColumnsController
       constructor: (@table) ->
-
-      # Our overridable dynamic columns function
-      dynamic: dynamicColumnsFunction
 
       blank: ->
         # Makes a blank object with our colNames as keys
@@ -112,9 +101,6 @@ angular.module("Mac").factory "TableColumnsController", [
         @table.columnsOrder = columns
         @table.columns      = columnsArray
 
-        @syncOrder()
-
-      syncOrder: ->
         # Function might be better in table...
         for sectionName, section of @table.sections
           for row in section.rows
@@ -148,36 +134,6 @@ angular.module("Mac").factory "TableRowsController", [
             row.cellsMap[colName] = cell
             row.cells.push cell
           row
-
-        set: (sectionName, models, sectionController) ->
-          # Get our section
-          section = @table.sections[sectionName]
-
-          # Don't continue if no models
-          return unless models?.length?
-
-          if @table.dynamicColumns
-            @table.columnsCtrl.dynamic(models)
-
-          rows = []
-          for model in models
-            rows.push @make(section, model)
-
-          section.rows = rows
-          @table.columnsCtrl.syncOrder()
-
-        insert: (sectionName, model, index) ->
-          section = @table.sections[sectionName]
-          row     = @make section, model
-          section.rows.splice(index, 0, row)
-
-        remove: (sectionName, index) ->
-          section = @table.sections[sectionName]
-          return section.rows.splice(index, 1)
-
-        clear: (sectionName) ->
-          section      = @table.sections[sectionName]
-          section.rows = []
 ]
 
 angular.module("Mac").factory "Table", [
@@ -202,9 +158,8 @@ angular.module("Mac").factory "Table", [
           @columnsMap         = {}
           @columnsCtrl        = new TableColumnsController(this)
           @rowsCtrl           = new TableRowsController(this)
-          @dynamicColumns     = columns is 'dynamic'
-          if not @dynamicColumns
-            @columnsCtrl.set(columns)
+
+          @columnsCtrl.set(columns)
           return
 
         makeSection: (sectionName) ->
@@ -243,15 +198,6 @@ angular.module("Mac").factory "Table", [
 
         loadController: (sectionName, sectionController) ->
           @sections[sectionName].setController sectionController if sectionController
-
-        insert: (sectionName, model, index = 0) ->
-          @rowsCtrl.insert sectionName, model, index
-
-        remove: (sectionName, index = 0) ->
-          @rowsCtrl.remove sectionName, index
-
-        clear: (sectionName) ->
-          @rowsCtrl.clear sectionName
 
         blankRow: ->
           @columnsCtrl.blank()

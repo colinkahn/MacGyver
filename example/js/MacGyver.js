@@ -12779,32 +12779,13 @@ angular.module("Mac").factory("tableComponents", [
   }
 ]);
 
-angular.module("Mac").factory("dynamicColumnsFunction", function() {
-  return function(models) {
-    var columns, first, key, model;
-    first = models[0];
-    columns = (function() {
-      var _results;
-      _results = [];
-      for (key in first) {
-        model = first[key];
-        _results.push(key);
-      }
-      return _results;
-    })();
-    return this.set(columns);
-  };
-});
-
 angular.module("Mac").factory("TableColumnsController", [
-  "tableComponents", "dynamicColumnsFunction", function(tableComponents, dynamicColumnsFunction) {
+  "tableComponents", function(tableComponents) {
     var ColumnsController;
     return ColumnsController = (function() {
       function ColumnsController(table) {
         this.table = table;
       }
-
-      ColumnsController.prototype.dynamic = dynamicColumnsFunction;
 
       ColumnsController.prototype.blank = function() {
         var colName, obj, _i, _len, _ref;
@@ -12818,7 +12799,7 @@ angular.module("Mac").factory("TableColumnsController", [
       };
 
       ColumnsController.prototype.set = function(columns) {
-        var colName, column, columnsArray, lastColumnsMap, nextColumnsMap, _i, _len;
+        var cell, cells, colName, column, columnsArray, lastColumnsMap, nextColumnsMap, row, section, sectionName, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
         lastColumnsMap = this.table.columnsMap;
         nextColumnsMap = {};
         columnsArray = [];
@@ -12833,21 +12814,16 @@ angular.module("Mac").factory("TableColumnsController", [
         this.table.columnsMap = nextColumnsMap;
         this.table.columnsOrder = columns;
         this.table.columns = columnsArray;
-        return this.syncOrder();
-      };
-
-      ColumnsController.prototype.syncOrder = function() {
-        var cell, cells, colName, column, columns, row, section, sectionName, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
         _ref = this.table.sections;
         for (sectionName in _ref) {
           section = _ref[sectionName];
           _ref1 = section.rows;
-          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-            row = _ref1[_i];
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            row = _ref1[_j];
             cells = [];
             _ref2 = this.table.columnsOrder;
-            for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
-              colName = _ref2[_j];
+            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+              colName = _ref2[_k];
               cell = row.cellsMap[colName];
               if (!cell) {
                 column = this.table.columnsMap[colName];
@@ -12860,8 +12836,8 @@ angular.module("Mac").factory("TableColumnsController", [
         }
         columns = [];
         _ref3 = this.table.columnsOrder;
-        for (_k = 0, _len2 = _ref3.length; _k < _len2; _k++) {
-          colName = _ref3[_k];
+        for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+          colName = _ref3[_l];
           columns.push(this.table.columnsMap[colName]);
         }
         return this.table.columns = columns;
@@ -12895,43 +12871,6 @@ angular.module("Mac").factory("TableRowsController", [
         return row;
       };
 
-      RowsController.prototype.set = function(sectionName, models, sectionController) {
-        var model, rows, section, _i, _len;
-        section = this.table.sections[sectionName];
-        if ((models != null ? models.length : void 0) == null) {
-          return;
-        }
-        if (this.table.dynamicColumns) {
-          this.table.columnsCtrl.dynamic(models);
-        }
-        rows = [];
-        for (_i = 0, _len = models.length; _i < _len; _i++) {
-          model = models[_i];
-          rows.push(this.make(section, model));
-        }
-        section.rows = rows;
-        return this.table.columnsCtrl.syncOrder();
-      };
-
-      RowsController.prototype.insert = function(sectionName, model, index) {
-        var row, section;
-        section = this.table.sections[sectionName];
-        row = this.make(section, model);
-        return section.rows.splice(index, 0, row);
-      };
-
-      RowsController.prototype.remove = function(sectionName, index) {
-        var section;
-        section = this.table.sections[sectionName];
-        return section.rows.splice(index, 1);
-      };
-
-      RowsController.prototype.clear = function(sectionName) {
-        var section;
-        section = this.table.sections[sectionName];
-        return section.rows = [];
-      };
-
       return RowsController;
 
     })();
@@ -12959,10 +12898,7 @@ angular.module("Mac").factory("Table", [
         this.columnsMap = {};
         this.columnsCtrl = new TableColumnsController(this);
         this.rowsCtrl = new TableRowsController(this);
-        this.dynamicColumns = columns === 'dynamic';
-        if (!this.dynamicColumns) {
-          this.columnsCtrl.set(columns);
-        }
+        this.columnsCtrl.set(columns);
         return;
       }
 
@@ -13014,24 +12950,6 @@ angular.module("Mac").factory("Table", [
         if (sectionController) {
           return this.sections[sectionName].setController(sectionController);
         }
-      };
-
-      Table.prototype.insert = function(sectionName, model, index) {
-        if (index == null) {
-          index = 0;
-        }
-        return this.rowsCtrl.insert(sectionName, model, index);
-      };
-
-      Table.prototype.remove = function(sectionName, index) {
-        if (index == null) {
-          index = 0;
-        }
-        return this.rowsCtrl.remove(sectionName, index);
-      };
-
-      Table.prototype.clear = function(sectionName) {
-        return this.rowsCtrl.clear(sectionName);
       };
 
       Table.prototype.blankRow = function() {

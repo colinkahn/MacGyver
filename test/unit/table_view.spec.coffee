@@ -77,16 +77,18 @@ describe "Table Data", ->
       expect(table.sections.body.rows[0].cells[0].column.width).toBe 50
 
     it "can remove a row at an index", ->
-      table = @scope.table
-      table.remove "body", 0
+      table       = @scope.table
+      singleModel = [models[1]]
+      table.load "body", singleModel
       expect(table.sections.body.rows.length).toBe 1
       expect(table.sections.body.rows[0].cells[0].value()).toBe "John Lennon"
 
     it "can add a row at an index", ->
       table = @scope.table
-      table.insert "body", {first_name: "Ringo", last_name: "Star", age: 40}, 1
+      moreModels = models.concat [{first_name: "Ringo", last_name: "Star", age: 40}]
+      table.load "body", moreModels
       expect(table.sections.body.rows.length).toBe 3
-      expect(table.sections.body.rows[1].cells[0].value()).toBe "Ringo Star"
+      expect(table.sections.body.rows[2].cells[0].value()).toBe "Ringo Star"
 
     it "can total a column", inject (TableSectionController) ->
       table = @scope.table
@@ -100,8 +102,7 @@ describe "Table Data", ->
           else
             ""
 
-      table.load("footer", null, FooterController)
-      table.insert("footer", table.blankRow())
+      table.load("footer", table.blankRow(), FooterController)
       expect(table.sections.footer.rows[0].cells[1].value()).toBe 59
 
     it "can set a header from a blank row", ->
@@ -119,16 +120,18 @@ describe "Table Data", ->
 
     it "can deal with columns being resorted", ->
       table = @scope.table
-      table.columnsOrder.reverse()
-      table.columnsCtrl.syncOrder()
+      reversedColumns = table.columnsOrder.slice(0)
+      reversedColumns.reverse()
+      table.columnsCtrl.set(reversedColumns)
       columns = []
       columns.push cell.column.colName for cell in table.sections.body.rows[0].cells
       expect(columns).toEqual table.columnsOrder
 
     it "keeps the columns in the correct order when a new section is loaded", ->
       table = @scope.table
-      table.columnsOrder.reverse()
-      table.columnsCtrl.syncOrder()
+      reversedColumns = table.columnsOrder.slice(0)
+      reversedColumns.reverse()
+      table.columnsCtrl.set(reversedColumns)
       stones = [
           {first_name: "Mick", last_name: "Jagger", age: 30}
           {first_name: "Keith", last_name: "Richards", age: 29} ]
@@ -171,7 +174,7 @@ describe "Table Data", ->
 
       it "can clear a section", ->
         table = @scope.table
-        table.clear "body"
+        table.load "body", []
         expect(table.sections.body.rows.length).toBe 0
 
 describe "Table View", ->
