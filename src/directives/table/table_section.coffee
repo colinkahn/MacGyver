@@ -9,6 +9,72 @@ macTableSectionModels, macTableSectionController, or macTableSectionBlankRow.
 macTable
 ###
 
+
+buildRows = (
+  scope
+  models
+  sectionName
+  sectionElement
+  rowTemplate
+  cellTemplates
+  rowCellMaps
+) ->
+  [rows, removedRows] = scope.table.load sectionName, models
+
+  for row in rows
+    if row.$element
+      sectionElement[0].appendChild row.$element[0]
+    else
+      row.$scope     = scope.$new()
+      row.$scope.row = row
+
+      rowTemplate row.$scope, (clone) =>
+        sectionElement[0].appendChild clone[0]
+        row.$element = clone
+
+    # Gets the correct linker based on the cell column name
+    linkerFactory = (cell) =>
+      templateName =
+        if cell?.column?.colName of cellTemplates
+          cell.column.colName
+        else
+          "?"
+
+      if template = cellTemplates[templateName]
+        return template[1]
+
+    # Repeat each cell
+
+    cells       = row.cells
+    lastCellMap = rowCellMaps[row.id] or {}
+    nextCellMap = {}
+
+    for cell in row.cells
+      key         = cell.column.colName
+      cellElement = lastCellMap[key]
+
+      if cellElement
+        nextCellMap[key] = cellElement
+        delete lastCellMap[key]
+        row.$element[0].appendChild cellElement[0]
+      else
+        nScope      = row.$scope.$new()
+        nScope.cell = cell
+
+        if linkerFn = linkerFactory cell
+          clonedElement = linkerFn nScope, (clone) ->
+            row.$element[0].appendChild clone[0]
+            nextCellMap[key] = clone
+
+    $el.remove() for key, $el of lastCellMap
+
+    rowCellMaps[row.id] = nextCellMap
+
+  for row in removedRows
+    row.$element.remove()
+    row.$scope.$destroy()
+    delete rowCellMaps[row.id]
+
 angular.module("Mac").directive "macTableSection", ->
   class MacTableSectionController
     constructor: (@scope, @attrs) ->
@@ -61,7 +127,7 @@ macTable, macTableSection
 
 angular.module("Mac").directive "macTableSectionBlankRow", ->
   class MacTableSectionBlankRowCtrl
-    constructor: (@scope) ->
+    constructor: (@scope, @element) ->
 
     watch: (expression, sectionName) ->
       # We want to wait for another section to be loaded before we create our
@@ -71,22 +137,32 @@ angular.module("Mac").directive "macTableSectionBlankRow", ->
       killWatcher = @scope.$watch "table.sections.#{sectionToWaitOn}.rows", (rows) =>
         return unless rows
         killWatcher()
+        model = @scope.table.blankRow()
 
-        @scope.$watch "table.columnsOrder", =>
-          # If this section has already been created, clear it so multiple rows
-          # aren't inserted
-          if sectionName of @scope.table.sections
-            @scope.table.clear  sectionName
-
+        @scope.$watch =>
           # We do this in two steps to avoid clobbering our columns when
           # the table has dynamic columns
-          @scope.table.load   sectionName
-          @scope.table.insert sectionName, @scope.table.blankRow()
+
+          @rowCellMaps = {} unless @rowCellMaps
+
+          buildRows(
+            @scope
+            [model]
+            sectionName
+            @element
+            @rowTemplate
+            @cellTemplates
+            @rowCellMaps
+          )
+          return JSON.stringify @scope.table.columnsOrder
+
 
   require:    ["^macTable", "macTableSection", "macTableSectionBlankRow"]
-  controller: ["$scope", MacTableSectionBlankRowCtrl]
+  controller: ["$scope", "$element", MacTableSectionBlankRowCtrl]
 
   link: ($scope, $element, $attrs, controllers) ->
+    controllers[2].cellTemplates = controllers[1].cellTemplates
+    controllers[2].rowTemplate   = controllers[1].rowTemplate
     controllers[1].registerWatcher "macTableSectionBlankRow", controllers[2]
 
 ###
@@ -102,7 +178,6 @@ macTable, macTableSection
 angular.module("Mac").directive "macTableSectionModels", ["$parse", ($parse) ->
   class MacTableSectionModelsCtrl
     constructor: (@scope, @element) ->
-      @rowCellMaps = {}
 
     watch: (expression, sectionName) ->
       lastStringified = ""
@@ -111,73 +186,19 @@ angular.module("Mac").directive "macTableSectionModels", ["$parse", ($parse) ->
         models = $parse(expression)(@scope)
         return unless angular.isArray models
 
-        # We compare these using JSON.stringify, which guards against circular
-        # structure better than the angular `copy` method
-        currStringified = JSON.stringify models
+        @rowCellMaps = {} unless @rowCellMaps
 
-        if currStringified isnt lastStringified
-          lastStringified = currStringified
+        buildRows(
+          @scope
+          models
+          sectionName
+          @element
+          @rowTemplate
+          @cellTemplates
+          @rowCellMaps
+        )
 
-          @models             = models
-          [rows, removedRows] = @scope.table.load sectionName, models
-
-          for row in rows
-            if row.$element
-              @element[0].appendChild row.$element[0]
-            else
-              row.$scope     = @scope.$new()
-              row.$scope.row = row
-
-              @rowTemplate row.$scope, (clone) =>
-                @element[0].appendChild clone[0]
-                row.$element = clone
-
-            # Gets the correct linker based on the cell column name
-            linkerFactory = (cell) =>
-              templateName =
-                if cell.column.colName of @cellTemplates
-                  cell.column.colName
-                else
-                  "?"
-
-              if template = @cellTemplates[templateName]
-                return template[1]
-
-            # Repeat each cell
-
-            cells       = row.cells
-            lastCellMap = @rowCellMaps[row.id] or {}
-            nextCellMap = {}
-
-            for cell in row.cells
-              key         = cell.column.colName
-              cellElement = lastCellMap[key]
-
-              if cellElement
-                nextCellMap[key] = cellElement
-                delete lastCellMap[key]
-                row.$element[0].appendChild cellElement[0]
-              else
-                nScope      = row.$scope.$new()
-                nScope.cell = cell
-
-                if linkerFn = linkerFactory cell
-                  clonedElement = linkerFn nScope, (clone) ->
-                    row.$element[0].appendChild clone[0]
-                    nextCellMap[key] = clone
-
-            $el.remove() for key, $el of lastCellMap
-
-            @rowCellMaps[row.id] = nextCellMap
-
-          for row in removedRows
-            row.$element.remove()
-            row.$scope.$destroy()
-            delete @rowCellMaps[row.id]
-
-          # This will cause our watcher to be fired again if something has
-          # changed
-          return currStringified
+        return JSON.stringify @scope.table.sections[sectionName].rows
 
   require:    ["^macTable", "macTableSection", "macTableSectionModels"]
   controller: ["$scope", "$element", MacTableSectionModelsCtrl]

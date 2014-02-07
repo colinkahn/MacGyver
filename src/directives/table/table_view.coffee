@@ -18,6 +18,10 @@ angular.module("Mac").factory "MacTableController", ["Table", (Table) ->
 
     makeTable: (columns) ->
       @table = @scope.table = new Table columns
+
+    setColumns: (columns) ->
+      @makeTable() unless @table
+      @table.columnsCtrl.set columns
 ]
 
 angular.module("Mac").directive "macTable", [ "MacTableController", (MacTableController) ->
@@ -94,6 +98,6 @@ angular.module("Mac").directive "macTable", [ "MacTableController", (MacTableCon
         # Otherwise we'll watch on our expression
         else
           $scope.$watch columnsExp, (columns) ->
-            controller.makeTable columns
+            controller.setColumns columns
           , true
 ]

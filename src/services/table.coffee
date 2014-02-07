@@ -19,9 +19,12 @@ angular.module("Mac").factory "TableRow", ->
       cells: @cells
 
 angular.module("Mac").factory "TableSection", ->
+  guid = 0
+
   class TableSection
     constructor: (controller, @table, @name, @rows = []) ->
       @setController controller
+      @id = "$S#{guid++}"
 
     setController: (controller) ->
       @ctrl = new controller(this)
@@ -91,19 +94,25 @@ angular.module("Mac").factory "TableColumnsController", [
           obj[colName] = null
         obj
 
-      reset: ->
-        @table.columnsOrder = []
-        @table.columns      = []
-        @table.columnsMap   = {}
-
       set: (columns) ->
-        @reset()
+        lastColumnsMap = @table.columnsMap
+        nextColumnsMap = {}
+        columnsArray   = []
+
         # Store the order
-        @table.columnsOrder = columns
         for colName in columns
-          column = tableComponents.columnFactory colName
-          @table.columnsMap[colName] = column
-          @table.columns.push column
+          column = lastColumnsMap[colName]
+
+          if not column
+            column = tableComponents.columnFactory colName
+
+          nextColumnsMap[colName] = columnsArray[columnsArray.length] = column
+
+        @table.columnsMap   = nextColumnsMap
+        @table.columnsOrder = columns
+        @table.columns      = columnsArray
+
+        @syncOrder()
 
       syncOrder: ->
         # Function might be better in table...
@@ -111,7 +120,11 @@ angular.module("Mac").factory "TableColumnsController", [
           for row in section.rows
             cells = []
             for colName in @table.columnsOrder
-              cells.push row.cellsMap[colName]
+              cell = row.cellsMap[colName]
+              unless cell
+                column = @table.columnsMap[colName]
+                cell   = tableComponents.cellFactory(row, column)
+              cells.push cell
             row.cells = cells
         columns = []
         for colName in @table.columnsOrder
@@ -183,11 +196,13 @@ angular.module("Mac").factory "Table", [
       # The Table class
       class Table
         constructor: (columns = []) ->
-          @sections       = {}
-          @columns        = []
-          @columnsCtrl    = new TableColumnsController(this)
-          @rowsCtrl       = new TableRowsController(this)
-          @dynamicColumns = columns is 'dynamic'
+          @sections           = {}
+          @columns            = []
+          @columnsOrder       = []
+          @columnsMap         = {}
+          @columnsCtrl        = new TableColumnsController(this)
+          @rowsCtrl           = new TableRowsController(this)
+          @dynamicColumns     = columns is 'dynamic'
           if not @dynamicColumns
             @columnsCtrl.set(columns)
           return
@@ -204,36 +219,27 @@ angular.module("Mac").factory "Table", [
           @loadModels     sectionName, models     if models
 
         loadModels: (sectionName, models) ->
-          section = @sections[sectionName]
-          models  = convertObjectModelsToArray models
+          orderedRows = []
+          tableModels = []
+          removedRows = []
+          section     = @sections[sectionName]
+          models      = convertObjectModelsToArray models
 
-          # Check if we're working with an existing section, if so we want to
-          # intelligently insert / remove only what we need to
-          if section?.rows.length
-            orderedRows = []
-            tableModels = []
-            removedRows = []
+          for row in section.rows
+            index = models.indexOf row.model
+            if index is -1
+              removedRows.push row
+            else
+              orderedRows[index] = row
+              tableModels[index] = row.model
 
-            for row in section.rows
-              index = models.indexOf row.model
-              if index is -1
-                removedRows.push row
-              else
-                orderedRows[index] = row
-                tableModels[index] = row.model
+          for model, index in models when model not in tableModels
+            orderedRows[index] = @rowsCtrl.make section, model
 
-            for model, index in models when model not in tableModels
-              orderedRows[index] = @rowsCtrl.make section, model
+          # Overwrite old rows, rows not in orderedRows get GC'd?
+          section.rows = orderedRows
 
-            # Overwrite old rows, rows not in orderedRows get GC'd?
-            section.rows = orderedRows
-
-            return [section.rows, removedRows]
-
-          # New or empty section, load using set which will also create a section
-          else
-            @rowsCtrl.set sectionName, models
-            return [section.rows, []]
+          return [section.rows, removedRows]
 
         loadController: (sectionName, sectionController) ->
           @sections[sectionName].setController sectionController if sectionController
@@ -249,6 +255,12 @@ angular.module("Mac").factory "Table", [
 
         blankRow: ->
           @columnsCtrl.blank()
+
+        setColumns: (columns) ->
+          for sectionName, section of @sections
+            for row in section.rows
+              for column in columns
+                cell = row.cellMap[column]
 
         toJSON: ->
           sections: @sections

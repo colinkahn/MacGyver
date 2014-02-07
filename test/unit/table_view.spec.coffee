@@ -47,6 +47,11 @@ describe "Table Data", ->
 
       expect(table.sections.body.rows[0].cells[0].value()).toBe "Overridden@!"
 
+    it "can use different columns", ->
+      table = @scope.table
+      table.columnsCtrl.set ["abc", "123"]
+      expect(table.sections.body.rows[0].cells[0].column.colName).toBe "abc"
+
     it "sets table on section", ->
       table = @scope.table
       # Section has table
@@ -169,66 +174,6 @@ describe "Table Data", ->
         table.clear "body"
         expect(table.sections.body.rows.length).toBe 0
 
-    describe "Dynamic Table", ->
-      beforeEach inject ($rootScope, Table, TableSectionController) ->
-        # Our custom header controller, we'll use this later
-        class HeaderController extends TableSectionController
-          cellValue: (row, colName) -> colName.replace(/_/g,' ')
-
-         models = [
-          {first_name: "Paul", last_name: "McCartney", age: 30, date_of_birth: '6/18/1942'}
-          {first_name: "John", last_name: "Lennon", age: 29, date_of_birth: '10/09/1940'} ]
-        @table = table = new Table('dynamic')
-        table.load("header", null, HeaderController)
-        table.load("body", models)
-
-      it "can make a blank model", ->
-        columns = []
-        columns.push key for key, value of @table.columnsCtrl.blank()
-        expect(columns).toEqual ['first_name', 'last_name', 'age', 'date_of_birth']
-
-      it "has dynamicColumns property set to true", ->
-        expect(@table.dynamicColumns).toBe true
-
-      it "generates the correct columns", ->
-        expect(@table.columnsOrder).toEqual ['first_name', 'last_name', 'age', 'date_of_birth']
-
-      it "generates the correct cells", ->
-        cells = @table.sections.body.rows[0].cells
-        columns = []
-        for cell in cells
-          columns.push cell.column.colName
-        expect(columns).toEqual ['first_name', 'last_name', 'age', 'date_of_birth']
-
-      it "can have an empty section become populated", ->
-        @table.insert "header", @table.blankRow()
-        expect(@table.sections.header.rows[0].cells[0].value()).toBe "first name"
-
-      it "can deal with columns being resorted", ->
-        @table.columnsOrder.reverse()
-        @table.columnsCtrl.syncOrder()
-        columns = []
-        columns.push cell.column.colName for cell in @table.sections.body.rows[0].cells
-        expect(columns).toEqual @table.columnsOrder
-
-      # TODO: This doesn't work yet, see below
-      # it "keeps the columns in the correct order when a new section is loaded", ->
-
-      it "updates the properties on the cells with properties on that column", ->
-        #
-        # TODO: There is an issue here, if we used:
-        #
-        #   @table.load "header", [@table.blankRow()]
-        #
-        # it would clobber our current columns and make new ones, disjointing
-        # them from the other sections (in this case the body)
-        # this just applies to dynamic tables
-        #
-        @table.insert "header", @table.blankRow()
-        @table.columns[0].width = 50
-        expect(@table.sections.header.rows[0].cells[0].column.width).toBe 50
-        expect(@table.sections.body.rows[0].cells[0].column.width).toBe 50
-
 describe "Table View", ->
   # Initialize these values up here
   scope    = null
@@ -315,10 +260,12 @@ describe "Table View", ->
           """<table mac-table mac-table-columns="tableColumns">
               <thead mac-table-section="header" mac-table-section-blank-row>
                 <tr mac-table-row>
-                  <th mac-cell-template mac-column-width="auto">Header Cell</th>
+                  <th mac-cell-template>Header Cell</th>
                 </tr>
               </thead>
-              <tbody mac-table-section="body" mac-table-section-models="tableData" mac-table-section-controller="tableBodySectionController">
+              <tbody mac-table-section="body"
+                     mac-table-section-models="tableData"
+                     mac-table-section-controller="tableBodySectionController">
                 <tr mac-table-row>
                   <td mac-cell-template>{{cell.value()}}</td>
                 </tr>
@@ -333,11 +280,11 @@ describe "Table View", ->
           class SectionTestBodySectionController extends TableSectionController
             name: "SectionTestBodySectionController"
             cellValue: (row, colName) ->
-                switch colName
-                  when "full_name"
-                    "#{row.model.first_name} #{row.model.last_name}"
-                  when "age"
-                    row.model.age
+              switch colName
+                when "full_name"
+                  "#{row.model.first_name} #{row.model.last_name}"
+                when "age"
+                  row.model.age
 
           element = $compile(sectionControllersTemplate)(scope)
 
@@ -346,6 +293,7 @@ describe "Table View", ->
             scope.tableColumns               = sectionControllersColumns
 
         it "Should use the values in the section controller", ->
+          scope.$apply ->
           expect(element.find("[mac-table-section=body] [mac-table-row]:first [mac-cell-template]:first").text()).toBe "Paul McCartney"
 
         it "Should only have a single row in the header and footer if the columns change", ->

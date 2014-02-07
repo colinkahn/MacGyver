@@ -11,7 +11,14 @@ module.controller "ExampleController", [
   "$window"
   "$timeout"
   "keys"
-($scope, $window, $timeout, keys) ->
+  "TableSectionController"
+(
+  $scope
+  $window
+  $timeout
+  keys
+  TableSectionController
+) ->
   $scope.keys          = ({key, code} for key, code of keys)
   $scope.selectOptions = [
     {value: 1, text: "text1"}
@@ -257,6 +264,11 @@ module.controller "ExampleController", [
     model.Title
 
   # Table Selectable Rows
+
+  $scope.tableBodySectionController = class BodySectionController extends TableSectionController
+    cellValue: (row, colName) ->
+      console.log colName
+      row.model[colName] + "blah blah"
   
   $scope.columns = ['No.', 'Title', 'Original air date']
 

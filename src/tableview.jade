@@ -76,6 +76,7 @@ block append content
                   mac-table-section                 = "body"
                   mac-table-section-models          = "macGyverSeasonOne | filter: query | orderBy: sortByName"
                   mac-table-section-selected-models = "$parent.$parent.selectedModels"
+                  mac-table-section-controller      = "tableBodySectionController"
                 )
                   tr(
                     mac-table-row
@@ -88,7 +89,7 @@ block append content
 
             .table-view-example__selectable-columns.span4
 
-              input(type="text", ng-model="query", placeholder="Search")
+              input(type="text", ng-model="query.Title", placeholder="Search")
 
               ul.nav-pills.table-view-example__selectable-columns__actions
                 li: a(href="", ng-click="selectAll()") Select All

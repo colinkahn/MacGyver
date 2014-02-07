@@ -1,4 +1,4 @@
-describe "Table Section Selected Models", ->
+xdescribe "Table Section Selected Models", ->
   # Initialize these values up here
   scope     = null
   $document = null

@@ -8152,15 +8152,15 @@ Source support multiple types:
   populated on the menu and the menu will adjust accordingly
 @param {Boolean} mac-autocomplete-disabled Boolean value if autocomplete should be disabled
 @param {Function} mac-autocomplete-on-select Function called when user select on an item
-       - `selected` - {Object} The item selected
+- `selected` - {Object} The item selected
 @param {Function} mac-autocomplete-on-success function called on success ajax request
-  - `data` - {Object} Data returned from the request
-  - `status` - {Number} The status code of the response
-  - `header` - {Object} Header of the response
-  @param {Function} mac-autocomplete-on-error Function called on ajax request error
-  - `data` - {Object} Data returned from the request
-  - `status` - {Number} The status code of the response
-  - `header` - {Object} Header of the response
+- `data` - {Object} Data returned from the request
+- `status` - {Number} The status code of the response
+- `header` - {Object} Header of the response
+@param {Function} mac-autocomplete-on-error Function called on ajax request error
+- `data` - {Object} Data returned from the request
+- `status` - {Number} The status code of the response
+- `header` - {Object} Header of the response
 @param {String}  mac-autocomplete-label The label to display to the users (default "name")
 @param {String}  mac-autocomplete-query The query parameter on GET command (default "q")
 @param {Integer} mac-autocomplete-delay Delay on fetching autocomplete data after keyup (default 800)
@@ -9459,6 +9459,127 @@ angular.module("Mac").directive("macPlaceholder", function() {
   };
 });
 
+/*
+@chalk
+@name mac-popover (attribute)
+@description
+Mac popover trigger directive. Without using mac-popover-child-popover, the last
+popover will be closed automatically
+
+@param {String}  mac-popover               ID of the popover to show
+@param {Boolean} mac-popover-fixed         Determine if the popover is fixed
+@param {Boolean} mac-popover-child-popover If the popover is child of another popover (default false)
+@param {Integer} mac-popover-offset-x      Extra x offset (default 0)
+@param {Integer} mac-popover-offset-y      Extra y offset (default 0)
+@param {String}  mac-popover-trigger       Trigger option, click | hover | manual (default click)
+- click: Popover only opens when user click on trigger
+- hover: Popover shows when user hover on trigger
+- focus: Popover shows when focus on input element
+@param {String}  mac-popover-exclude       CSV of popover id that can't be shown at the same time
+*/
+
+var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+
+angular.module("Mac").directive("macPopover", [
+  "$timeout", "popover", "util", "popoverViews", function($timeout, popover, util, popoverViews) {
+    return {
+      restrict: "A",
+      link: function(scope, element, attrs) {
+        var clearDelays, closeDelayId, delayId, exclude, excludeList, hide, options, show;
+        options = util.extendAttributes("macPopover", popoverViews.defaults, attrs);
+        exclude = attrs.macPopoverExclude || "";
+        excludeList = exclude ? exclude.split(",") : [];
+        delayId = null;
+        closeDelayId = null;
+        clearDelays = function() {
+          if (delayId != null) {
+            $timeout.cancel(delayId);
+          }
+          if (closeDelayId != null) {
+            return $timeout.cancel(closeDelayId);
+          }
+        };
+        show = function(id, delay) {
+          if (delay == null) {
+            delay = 0;
+          }
+          clearDelays();
+          delayId = $timeout(function() {
+            var last, _ref;
+            last = popover.last();
+            if ((last != null) && (!excludeList.length || (_ref = last.id, __indexOf.call(excludeList, _ref) >= 0) || last.id === id)) {
+              popover.hide();
+              if (element[0] === last.element[0]) {
+                return true;
+              }
+            }
+            options.scope = scope;
+            return popover.show(id, element, attrs, options);
+          }, delay);
+          return true;
+        };
+        hide = function(element, delay) {
+          if (delay == null) {
+            delay = 0;
+          }
+          clearDelays();
+          return closeDelayId = $timeout(function() {
+            return popover.hide(element);
+          }, delay);
+        };
+        return attrs.$observe("macPopover", function(id) {
+          var hideEvent, showEvent;
+          if (!id) {
+            return;
+          }
+          if (options.trigger === "click") {
+            return element.bind("click", function() {
+              return show(id, 0);
+            });
+          } else {
+            showEvent = "focus" ? "focusin" : "mouseenter";
+            hideEvent = "focus" ? "focusout" : "mouseleave";
+            element.bind(showEvent, function() {
+              return show(id, 400);
+            });
+            return element.bind(hideEvent, function() {
+              return hide(element, 500);
+            });
+          }
+        });
+      }
+    };
+  }
+]).directive("macPopover", [
+  "popover", "popoverViews", "util", function(popover, popoverViews, util) {
+    return {
+      restrict: "E",
+      link: function($scope, element, attrs) {
+        var opts;
+        opts = util.extendAttributes("macPopover", popoverViews.popoverDefaults, attrs);
+        if (!attrs.id) {
+          return;
+        }
+        angular.extend(opts, {
+          template: element.html()
+        });
+        element.replaceWith(document.createComment("macPopover: " + attrs.id));
+        return popover.register(attrs.id, opts);
+      }
+    };
+  }
+]).directive("macPopoverFillContent", [
+  "$compile", function($compile) {
+    return {
+      restrict: "A",
+      link: function($scope, element, attrs, ctrl) {
+        element.html($scope.macPopoverTemplate);
+        return $compile(element.contents())($scope);
+      }
+    };
+  }
+]);
+
 angular.module("Mac").directive("macReorderable", [
   "hookableDirectiveController", function(hookableDirectiveController) {
     return {
@@ -9886,7 +10007,7 @@ angular.module("Mac").directive("macCellTemplate", [
     return {
       transclude: "element",
       priority: 1000,
-      require: ["^macTable", "^macTableSection", "^macTableRow"],
+      require: ["^macTable", "^macTableSection"],
       compile: function(element, attr, linker) {
         return function($scope, $element, $attr, controllers) {
           var templateName, templateNames, _i, _len, _results;
@@ -9913,45 +10034,15 @@ Directive initializing a table row for cell templates to be registered under
 macTable, macTableSection
 */
 
-angular.module("Mac").factory("MacTableRowController", [
-  "directiveHelpers", function(directiveHelpers) {
-    var MacTableRowController;
-    return MacTableRowController = (function() {
-      function MacTableRowController() {}
-
-      MacTableRowController.prototype.repeatCells = function(cells, rowElement, sectionController) {
-        var linkerFactory;
-        rowElement.children().remove();
-        linkerFactory = function(cell) {
-          var template, templateName;
-          templateName = cell.column.colName in sectionController.cellTemplates ? cell.column.colName : "?";
-          if (template = sectionController.cellTemplates[templateName]) {
-            return template[1];
-          }
-        };
-        return directiveHelpers.repeater(cells, "cell", rowElement.scope(), rowElement, linkerFactory);
-      };
-
-      return MacTableRowController;
-
-    })();
-  }
-]);
-
 angular.module("Mac").directive("macTableRow", [
-  "MacTableRowController", function(MacTableRowController) {
+  function() {
     return {
-      require: ["^macTable", "^macTableSection", "macTableRow"],
-      controller: MacTableRowController,
+      require: ["^macTable", "^macTableSection"],
+      controller: function() {},
+      transclude: "element",
       compile: function(element, attr) {
-        return function($scope, $element, $attr, controllers) {
-          return $scope.$watch("row.cells", function(cells) {
-            var _ref;
-            if (((_ref = controllers[1].section) != null ? _ref.name : void 0) == null) {
-              return;
-            }
-            return controllers[2].repeatCells(cells, $element, controllers[1]);
-          });
+        return function($scope, $element, $attr, controllers, $transclude) {
+          return controllers[1].rowTemplate = $transclude;
         };
       }
     };
@@ -9968,6 +10059,70 @@ macTableSectionModels, macTableSectionController, or macTableSectionBlankRow.
 @dependencies
 macTable
 */
+
+var buildRows;
+
+buildRows = function(scope, models, sectionName, sectionElement, rowTemplate, cellTemplates, rowCellMaps) {
+  var $el, cell, cellElement, cells, clonedElement, key, lastCellMap, linkerFactory, linkerFn, nScope, nextCellMap, removedRows, row, rows, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results,
+    _this = this;
+  _ref = scope.table.load(sectionName, models), rows = _ref[0], removedRows = _ref[1];
+  for (_i = 0, _len = rows.length; _i < _len; _i++) {
+    row = rows[_i];
+    if (row.$element) {
+      sectionElement[0].appendChild(row.$element[0]);
+    } else {
+      row.$scope = scope.$new();
+      row.$scope.row = row;
+      rowTemplate(row.$scope, function(clone) {
+        sectionElement[0].appendChild(clone[0]);
+        return row.$element = clone;
+      });
+    }
+    linkerFactory = function(cell) {
+      var template, templateName, _ref1;
+      templateName = (cell != null ? (_ref1 = cell.column) != null ? _ref1.colName : void 0 : void 0) in cellTemplates ? cell.column.colName : "?";
+      if (template = cellTemplates[templateName]) {
+        return template[1];
+      }
+    };
+    cells = row.cells;
+    lastCellMap = rowCellMaps[row.id] || {};
+    nextCellMap = {};
+    _ref1 = row.cells;
+    for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+      cell = _ref1[_j];
+      key = cell.column.colName;
+      cellElement = lastCellMap[key];
+      if (cellElement) {
+        nextCellMap[key] = cellElement;
+        delete lastCellMap[key];
+        row.$element[0].appendChild(cellElement[0]);
+      } else {
+        nScope = row.$scope.$new();
+        nScope.cell = cell;
+        if (linkerFn = linkerFactory(cell)) {
+          clonedElement = linkerFn(nScope, function(clone) {
+            row.$element[0].appendChild(clone[0]);
+            return nextCellMap[key] = clone;
+          });
+        }
+      }
+    }
+    for (key in lastCellMap) {
+      $el = lastCellMap[key];
+      $el.remove();
+    }
+    rowCellMaps[row.id] = nextCellMap;
+  }
+  _results = [];
+  for (_k = 0, _len2 = removedRows.length; _k < _len2; _k++) {
+    row = removedRows[_k];
+    row.$element.remove();
+    row.$scope.$destroy();
+    _results.push(delete rowCellMaps[row.id]);
+  }
+  return _results;
+};
 
 angular.module("Mac").directive("macTableSection", function() {
   var MacTableSectionController;
@@ -10044,8 +10199,9 @@ macTable, macTableSection
 angular.module("Mac").directive("macTableSectionBlankRow", function() {
   var MacTableSectionBlankRowCtrl;
   MacTableSectionBlankRowCtrl = (function() {
-    function MacTableSectionBlankRowCtrl(scope) {
+    function MacTableSectionBlankRowCtrl(scope, element) {
       this.scope = scope;
+      this.element = element;
     }
 
     MacTableSectionBlankRowCtrl.prototype.watch = function(expression, sectionName) {
@@ -10053,16 +10209,18 @@ angular.module("Mac").directive("macTableSectionBlankRow", function() {
         _this = this;
       sectionToWaitOn = expression || "body";
       return killWatcher = this.scope.$watch("table.sections." + sectionToWaitOn + ".rows", function(rows) {
+        var model;
         if (!rows) {
           return;
         }
         killWatcher();
-        return _this.scope.$watch("table.columnsOrder", function() {
-          if (sectionName in _this.scope.table.sections) {
-            _this.scope.table.clear(sectionName);
+        model = _this.scope.table.blankRow();
+        return _this.scope.$watch(function() {
+          if (!_this.rowCellMaps) {
+            _this.rowCellMaps = {};
           }
-          _this.scope.table.load(sectionName);
-          return _this.scope.table.insert(sectionName, _this.scope.table.blankRow());
+          buildRows(_this.scope, [model], sectionName, _this.element, _this.rowTemplate, _this.cellTemplates, _this.rowCellMaps);
+          return JSON.stringify(_this.scope.table.columnsOrder);
         });
       });
     };
@@ -10072,8 +10230,10 @@ angular.module("Mac").directive("macTableSectionBlankRow", function() {
   })();
   return {
     require: ["^macTable", "macTableSection", "macTableSectionBlankRow"],
-    controller: ["$scope", MacTableSectionBlankRowCtrl],
+    controller: ["$scope", "$element", MacTableSectionBlankRowCtrl],
     link: function($scope, $element, $attrs, controllers) {
+      controllers[2].cellTemplates = controllers[1].cellTemplates;
+      controllers[2].rowTemplate = controllers[1].rowTemplate;
       return controllers[1].registerWatcher("macTableSectionBlankRow", controllers[2]);
     }
   };
@@ -10094,8 +10254,9 @@ angular.module("Mac").directive("macTableSectionModels", [
   "$parse", function($parse) {
     var MacTableSectionModelsCtrl;
     MacTableSectionModelsCtrl = (function() {
-      function MacTableSectionModelsCtrl(scope) {
+      function MacTableSectionModelsCtrl(scope, element) {
         this.scope = scope;
+        this.element = element;
       }
 
       MacTableSectionModelsCtrl.prototype.watch = function(expression, sectionName) {
@@ -10103,18 +10264,16 @@ angular.module("Mac").directive("macTableSectionModels", [
           _this = this;
         lastStringified = "";
         return this.scope.$watch(function() {
-          var currStringified, models;
+          var models;
           models = $parse(expression)(_this.scope);
           if (!angular.isArray(models)) {
             return;
           }
-          currStringified = JSON.stringify(models);
-          if (currStringified !== lastStringified) {
-            lastStringified = currStringified;
-            _this.models = models;
-            _this.scope.table.load(sectionName, models);
-            return currStringified;
+          if (!_this.rowCellMaps) {
+            _this.rowCellMaps = {};
           }
+          buildRows(_this.scope, models, sectionName, _this.element, _this.rowTemplate, _this.cellTemplates, _this.rowCellMaps);
+          return JSON.stringify(_this.scope.table.sections[sectionName].rows);
         });
       };
 
@@ -10123,8 +10282,10 @@ angular.module("Mac").directive("macTableSectionModels", [
     })();
     return {
       require: ["^macTable", "macTableSection", "macTableSectionModels"],
-      controller: ["$scope", MacTableSectionModelsCtrl],
+      controller: ["$scope", "$element", MacTableSectionModelsCtrl],
       link: function($scope, $element, $attrs, controllers) {
+        controllers[2].cellTemplates = controllers[1].cellTemplates;
+        controllers[2].rowTemplate = controllers[1].rowTemplate;
         return controllers[1].registerWatcher("macTableSectionModels", controllers[2]);
       }
     };
@@ -10440,6 +10601,13 @@ angular.module("Mac").factory("MacTableController", [
         return this.table = this.scope.table = new Table(columns);
       };
 
+      MacTableController.prototype.setColumns = function(columns) {
+        if (!this.table) {
+          this.makeTable();
+        }
+        return this.table.columnsCtrl.set(columns);
+      };
+
       return MacTableController;
 
     })();
@@ -10463,7 +10631,13 @@ angular.module("Mac").directive("macTable", [
         if (attr.macTableReorderableColumns != null) {
           headerSectionElement.find("[mac-table-row]").attr("mac-reorderable", "[mac-cell-template]").attr("mac-reorderable-columns", "");
         }
-        element.find("[mac-table-row]").not("[mac-table-row][ng-repeat]").attr("ng-repeat", "row in section.rows");
+        /*
+        # Generate our boilerplate ng-repeat on rows if there isn't on set already
+        element.find("[mac-table-row]")
+          .not("[mac-table-row][ng-repeat]")
+          .attr("ng-repeat", "row in section.rows")
+        */
+
         autoWidthTemplates = headerSectionElement.find("[mac-column-width=auto]");
         if (autoWidthTemplates.length) {
           siblingTemplates = headerSectionElement.find("[mac-column-width]").not("[mac-column-width=auto]");
@@ -10481,7 +10655,7 @@ angular.module("Mac").directive("macTable", [
               return controller.makeTable("dynamic");
             } else {
               return $scope.$watch(columnsExp, function(columns) {
-                return controller.makeTable(columns);
+                return controller.setColumns(columns);
               }, true);
             }
           });
@@ -10496,14 +10670,26 @@ angular.module("Mac").directive("macTable", [
 @name Tag Autocomplete
 
 @description
-A directive for generating tag input with autocomplete support on text input
+A directive for generating tag input with autocomplete support on text input.
+Tag autocomplete has priority 800
 
 @dependencies
 - mac-autocomplete
 - mac-menu
 
-@param {String}  mac-tag-autocomplete-url         Url to fetch autocomplete dropdown list data
-@param {String}  mac-tag-autocomplete-source      List of elements to populate autocomplete
+@param {String}  mac-tag-autocomplete-url         Url to fetch autocomplete dropdown list data.
+mac-tag-autocomplete-url and mac-tag-autocomplete-source cannot be used together. Url
+will always take priority over mac-tag-autocomplete-source.
+@param {String}  mac-tag-autocomplete-source      Data to use.
+Source support multiple types:
+- Array: An array can be used for local data and there are two supported formats:
+  - An array of strings: ["Item1", "Item2"]
+  - An array of objects with mac-autocomplete-label key: [{name:"Item1"}, {name:"Item2"}]
+- String: Using a string as the source is the same as passing the variable into mac-autocomplete-url
+- Function: A callback when querying for data. The callback receive two arguments:
+  - {String} Value currently in the text input
+  - {Function} A response callback which expects a single argument, data to user. The data will be
+  populated on the menu and the menu will adjust accordingly
 @param {String}  mac-tag-autocomplete-value       The value to be sent back upon selection (default "id")
 @param {String}  mac-tag-autocomplete-label       The label to display to the users (default "name")
 @param {Expr}    mac-tag-autocomplete-model       Model for autocomplete
@@ -10513,11 +10699,11 @@ A directive for generating tag input with autocomplete support on text input
 @param {String}  mac-tag-autocomplete-placeholder Placeholder text of the text input (default "")
 @param {Boolean} mac-tag-autocomplete-disabled    If autocomplete is enabled or disabled (default false)
 @param {Expr}    mac-tag-autocomplete-on-enter    When autocomplete is disabled, this function is called on enter, Should return either string, object or boolean. If false, item is not added
-        - `item` - {String} User input
+- `item` - {String} User input
 @param {String}  mac-tag-autocomplete-events      A CSV list of events to attach functions to
 @param {Expr}    mac-tag-autocomplete-on-         Function to be called when specified event is fired
-        - `event` - {Object} jQuery event
-        - `value` - {String} Value in the input text
+- `event` - {Object} jQuery event
+- `value` - {String} Value in the input text
 
 @param {Event} mac-tag-autocomplete-clear-input $broadcast message; clears text input when received
 */
@@ -10530,6 +10716,7 @@ angular.module("Mac").directive("macTagAutocomplete", [
       restrict: "E",
       templateUrl: "template/tag_autocomplete.html",
       replace: true,
+      priority: 800,
       scope: {
         url: "=macTagAutocompleteUrl",
         placeholder: "=macTagAutocompletePlaceholder",
@@ -10567,9 +10754,9 @@ angular.module("Mac").directive("macTagAutocomplete", [
         }
         textInput.attr(attrsObject);
         return function($scope, element, attrs) {
-          var updateAutocompleteSource;
+          var updateAutocompleteSource, watchFn;
           $scope.textInput = "";
-          $scope.autocompleteSource = [];
+          $scope.autocompleteSource = angular.isArray($scope.source) ? [] : $scope.source;
           if (attrs.macTagAutocompleteModel != null) {
             $scope.$watch("textInput", function(value) {
               return $scope.model = value;
@@ -10623,7 +10810,8 @@ angular.module("Mac").directive("macTagAutocomplete", [
           updateAutocompleteSource = function() {
             var difference, item, selectedValues, sourceValues, _ref;
             $scope.autocompletePlaceholder = ((_ref = $scope.selected) != null ? _ref.length : void 0) ? "" : $scope.placeholder;
-            if (!useSource) {
+            if (!(useSource && angular.isArray($scope.source))) {
+              $scope.autocompleteSource = $scope.source;
               return;
             }
             sourceValues = (function() {
@@ -10671,7 +10859,8 @@ angular.module("Mac").directive("macTagAutocomplete", [
             })();
           };
           if (useSource) {
-            $scope.$watchCollection("source", updateAutocompleteSource);
+            watchFn = angular.isArray($scope.source) ? "$watchCollection" : "$watch";
+            $scope[watchFn]("source", updateAutocompleteSource);
           }
           $scope.$watchCollection("selected", updateAutocompleteSource);
           $scope.onKeyDown = function($event) {
@@ -11122,7 +11311,9 @@ angular.module("Mac").directive("macTooltip", [
 ]);
 
 var module,
-  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },
+  __hasProp = {}.hasOwnProperty,
+  __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
 module = angular.module("Mac");
 
@@ -11137,8 +11328,8 @@ module.controller("modalController", [
 ]);
 
 module.controller("ExampleController", [
-  "$scope", "$window", "keys", function($scope, $window, keys) {
-    var code, key;
+  "$scope", "$window", "$timeout", "keys", "TableSectionController", function($scope, $window, $timeout, keys, TableSectionController) {
+    var BodySectionController, addModels, code, key, removedColumns, _ref;
     $scope.keys = (function() {
       var _results;
       _results = [];
@@ -11415,7 +11606,7 @@ module.controller("ExampleController", [
     $scope.selectAll = function() {
       return $scope.selectedModels = $scope.macGyverSeasonOne.slice(0);
     };
-    return $scope.selectRandom = function() {
+    $scope.selectRandom = function() {
       var i, index, length, model, models, _i, _ref;
       length = $scope.macGyverSeasonOne.length;
       models = [];
@@ -11427,6 +11618,57 @@ module.controller("ExampleController", [
         }
       }
       return $scope.selectedModels = models;
+    };
+    $scope.sortByName = function(model) {
+      return model.Title;
+    };
+    $scope.tableBodySectionController = BodySectionController = (function(_super) {
+      __extends(BodySectionController, _super);
+
+      function BodySectionController() {
+        _ref = BodySectionController.__super__.constructor.apply(this, arguments);
+        return _ref;
+      }
+
+      BodySectionController.prototype.cellValue = function(row, colName) {
+        console.log(colName);
+        return row.model[colName] + "blah blah";
+      };
+
+      return BodySectionController;
+
+    })(TableSectionController);
+    $scope.columns = ['No.', 'Title', 'Original air date'];
+    removedColumns = [];
+    $scope.removeColumn = function() {
+      return removedColumns.push($scope.columns.pop());
+    };
+    $scope.addColumn = function() {
+      console.log(removedColumns);
+      return $scope.columns.push(removedColumns.pop());
+    };
+    $scope.perfModels = [];
+    $scope.perfIntervalCallback = function() {
+      var index;
+      index = $scope.perfModels.length;
+      $scope.perfModels[index] = {
+        'No.': '1',
+        'Title': '"Pilot"',
+        'Directed by': 'Jerrold Freedman',
+        'Written by': 'Thackary Pallor',
+        'Original air date': 'September 29, 1985'
+      };
+      return $timeout($scope.perfIntervalCallback, 50);
+    };
+    addModels = true;
+    return $scope.perfIntervalCallbackTwo = function() {
+      if (addModels) {
+        $scope.perfModels = $scope.macGyverSeasonOne;
+      } else {
+        $scope.perfModels = [];
+      }
+      addModels = !addModels;
+      return $timeout($scope.perfIntervalCallbackTwo, 50);
     };
   }
 ]);
@@ -11924,6 +12166,377 @@ angular.module("Mac").service("modal", [
 
 /*
 @chalk overview
+@name Popover Service
+
+@description
+A popover service to keep state of opened popover. Allowing user to hide certain
+or all popovers
+
+@param {Array} popoverList The popover that's currently being shown
+
+@param {Array} registered Object storing all the registered popover DOM elements
+
+@param {Function} last Get data of the last popover
+- Returns {Object} The last opened popover
+
+@param {Function} register Register a popover with an id and an element
+- {String} id Popover id
+- {DOM Element} element Popover element
+- Returns {Bool} If the id already existed
+
+@param {Function} unregister Remove id and element from registered list of popover
+- {String} id Popover id
+- Returns {Bool} If the id exist
+
+@param {Function} add Add a new popover to opened list
+- {String} id Popover id
+- {DOM Element} popover Popover DOM element
+- {DOM Element} element Trigger DOM element
+- {Object} options Additional options
+- Returns {Object} The new popover object
+
+@param {Function} pop Get and remove the last popover from list
+- Returns {Object} Last element from popoverList
+
+@param {Function} show Show and position a registered popover
+- {String} id Popover id
+- {DOM Element} element Element that trigger the popover
+- {Object} options Additional options for popover
+
+@param {Function} getById Get opened popover object by id
+- {String} id Popover id
+- Returns {Object} Opened popover object
+
+@param {Function} resize Update size and position of an opened popover
+- {Object|String} popoverObj Support multiple type input:
+  - Object: One of the popover objects in popoverList
+  - String: Popover ID
+
+@param {Function} hide Hide a certain popover. If no selector is provided, the
+last opened popover is hidden
+- {DOM Element|String} selector Support multiple type input:
+  - DOM Element: Popover trigger element
+  - String: Popover ID
+- {Function} callback Callback after popover is hidden
+
+@param {Function} hideAll Hide all popovers
+*/
+
+angular.module("Mac").provider("popoverViews", function() {
+  this.registered = {};
+  this.defaults = {
+    fixed: false,
+    childPopover: false,
+    offsetY: 0,
+    offsetX: 0,
+    trigger: "click"
+  };
+  this.popoverDefaults = {
+    footer: false,
+    header: false,
+    title: "",
+    direction: "above left"
+  };
+  /*
+  @name template
+  @description
+  Popover template
+  */
+
+  this.template = "<div class=\"mac-popover\" ng-class=\"macPopoverClasses\">\n  <div class=\"tip\"></div>\n  <div class=\"popover-header\">\n    <div class=\"title\">{{macPopoverTitle}}</div>\n  </div>\n  <div mac-popover-fill-content></div>\n</div>";
+  this.$get = function() {
+    return this;
+  };
+  return this;
+}).service("popover", [
+  "$animate", "$compile", "$controller", "$http", "$rootScope", "$templateCache", "$timeout", "popoverViews", function($animate, $compile, $controller, $http, $rootScope, $templateCache, $timeout, popoverViews) {
+    var service;
+    service = {
+      popoverList: [],
+      registered: popoverViews.registered,
+      last: function() {
+        return this.popoverList[this.popoverList.length - 1];
+      },
+      register: function(id, options) {
+        var exist;
+        if (!(exist = this.registered[id] != null)) {
+          this.registered[id] = options;
+        }
+        return !exist;
+      },
+      unregister: function(id) {
+        var exist;
+        if (exist = this.registered[id] != null) {
+          delete this.registered[id];
+        }
+        return exist;
+      },
+      add: function(id, popover, element, options) {
+        var newObject;
+        newObject = {
+          id: id,
+          popover: popover,
+          element: element,
+          options: options
+        };
+        this.popoverList.push(newObject);
+        return newObject;
+      },
+      pop: function() {
+        return this.popoverList.pop();
+      },
+      show: function(id, element, options) {
+        var addPopover, popoverOptions;
+        if (options == null) {
+          options = {};
+        }
+        popoverOptions = this.registered[id];
+        if (!popoverOptions) {
+          return false;
+        }
+        addPopover = function() {
+          var path, showPopover, template;
+          showPopover = function(template) {
+            var popover, popoverObj, viewScope;
+            viewScope = (options.scope || $rootScope).$new();
+            if (popoverOptions.refreshOn) {
+              viewScope.$on(popoverOptions.refreshOn, function() {
+                return service.resize(id);
+              });
+            }
+            if (popoverOptions.controller) {
+              $controller(popoverOptions.controller, {
+                $scope: viewScope
+              });
+            }
+            angular.extend(viewScope, {
+              macPopoverClasses: {
+                footer: popoverOptions.footer || false,
+                header: popoverOptions.header || !!popoverOptions.title || false,
+                fixed: popoverOptions.fixed || false
+              },
+              macPopoverTitle: popoverOptions.title || "",
+              macPopoverTemplate: template
+            });
+            popover = $compile(popoverViews.template)(viewScope);
+            popover.attr({
+              id: id,
+              direction: popoverOptions.direction || "below left"
+            });
+            popoverObj = service.add(id, popover, element, options);
+            $animate.addClass(element, "active");
+            $rootScope.$broadcast("popoverWasShown", id);
+            return $animate.enter(popover, angular.element(document.body), null, function() {
+              return service.resize(popoverObj);
+            });
+          };
+          if ((template = popoverOptions.template)) {
+            return showPopover(template);
+          } else if ((path = popoverOptions.templateUrl)) {
+            template = $templateCache.get(path);
+            if (template) {
+              return showPopover(template);
+            } else {
+              return $http.get(path).then(function(resp) {
+                $templateCache.put(path, resp.data);
+                return showPopover(resp.data);
+              }, function() {
+                throw new Error('Failed to load template: #{path}');
+              });
+            }
+          }
+        };
+        if (service.popoverList.length && !!!options.childPopover) {
+          service.hide(addPopover);
+        } else {
+          addPopover();
+        }
+        return true;
+      },
+      getById: function(id, element) {
+        var item, sameTrigger, _i, _len, _ref;
+        _ref = this.popoverList;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          item = _ref[_i];
+          sameTrigger = (element == null) || item.element === element;
+          if (item.id === id && sameTrigger) {
+            return item;
+          }
+        }
+      },
+      resize: function(popoverObj) {
+        var $window, action, current, currentPopover, diff, left, offset, options, position, relative, relativeElement, setOverflowPosition, top, topScroll, updateOffset;
+        if (angular.isString(popoverObj)) {
+          popoverObj = service.getById(popoverObj);
+        }
+        if (popoverObj == null) {
+          return;
+        }
+        currentPopover = popoverObj.popover;
+        relativeElement = popoverObj.element;
+        options = popoverObj.options;
+        $window = angular.element(window);
+        offset = relativeElement.offset();
+        if (options.fixed) {
+          offset.top = relativeElement.position().top;
+        }
+        relative = {
+          height: relativeElement.outerHeight(),
+          width: relativeElement.outerWidth()
+        };
+        current = {
+          height: currentPopover.outerHeight(),
+          width: currentPopover.outerWidth()
+        };
+        top = 0;
+        left = 0;
+        position = (currentPopover.attr("direction") || "top left").trim();
+        setOverflowPosition = function(offset) {
+          var tip, tipOffset;
+          if (offset == null) {
+            offset = 0;
+          }
+          tip = angular.element(currentPopover[0].getElementsByClassName("tip"));
+          top -= offset;
+          tipOffset = +tip.css("margin-top").replace("px", "");
+          return tip.css("margin-top", tipOffset + offset);
+        };
+        updateOffset = function() {
+          switch (position) {
+            case "above left":
+              top = -(current.height + 10);
+              return left = -25 + relative.width / 2;
+            case "above right":
+              top = -(current.height + 10);
+              return left = 25 + relative.width / 2 - current.width;
+            case "below left":
+              top = relative.height + 10;
+              return left = -25 + relative.width / 2;
+            case "below right":
+              top = relative.height + 10;
+              return left = 25 + relative.width / 2 - current.width;
+            case "middle right":
+              top = relative.height / 2 - current.height / 2;
+              return left = relative.width + 10;
+            case "middle left":
+              top = relative.height / 2 - current.height / 2;
+              return left = -(current.width + 10);
+          }
+        };
+        updateOffset();
+        topScroll = options.fixed ? 0 : $window.scrollTop();
+        action = {};
+        if (position.indexOf("middle") === -1) {
+          if (offset.top + top - topScroll < 0) {
+            action = {
+              remove: "above",
+              add: "below"
+            };
+          } else if (offset.top + top - topScroll > $window.height()) {
+            action = {
+              remove: "below",
+              add: "above"
+            };
+          }
+        } else {
+          if ((diff = offset.top + top - topScroll) < 0) {
+            setOverflowPosition(diff);
+          } else if ((diff = offset.top + top + currentPopover.outerHeight() - topScroll - $window.height()) > 0) {
+            setOverflowPosition(diff);
+          }
+        }
+        if (offset.left + left < 0) {
+          action = {
+            remove: "right",
+            add: "left"
+          };
+        } else if (offset.left + left + currentPopover.outerWidth() > $window.width()) {
+          action = {
+            remove: "left",
+            add: "right"
+          };
+        }
+        if (action.remove && action.add) {
+          position = position.replace(action.remove, action.add);
+          updateOffset();
+        }
+        offset.top += top;
+        offset.left += left;
+        if (options.offsetX != null) {
+          offset.left += options.offsetX;
+        }
+        if (options.offsetY != null) {
+          offset.top += options.offsetY;
+        }
+        return currentPopover.css(offset).addClass("visible " + position);
+      },
+      hide: function(selector, callback) {
+        var comparator, i, index, popoverObj, removeScope, _i, _ref;
+        if (!this.popoverList.length) {
+          return typeof callback === "function" ? callback() : void 0;
+        }
+        if (angular.isFunction(selector)) {
+          callback = selector;
+          selector = null;
+        }
+        if (selector != null) {
+          comparator = angular.isString(selector) ? function(item) {
+            return item.id === selector;
+          } : angular.isElement(selector) ? function(item) {
+            return item.element === selector;
+          } : void 0;
+          index = -1;
+          for (i = _i = _ref = this.popoverList.length - 1; _i >= 0; i = _i += -1) {
+            if (!(comparator(this.popoverList[i]))) {
+              continue;
+            }
+            popoverObj = this.popoverList[i];
+            index = i;
+            break;
+          }
+          if (index > -1) {
+            this.popoverList.splice(index, 1);
+          }
+        } else {
+          popoverObj = this.pop();
+        }
+        if (popoverObj == null) {
+          return;
+        }
+        $rootScope.$broadcast("popoverBeforeHide", popoverObj.id);
+        removeScope = popoverObj.popover.scope();
+        return $animate.leave(popoverObj.popover, function() {
+          $animate.removeClass(popoverObj.element, "active");
+          $rootScope.$broadcast("popoverWasHidden", popoverObj.id);
+          removeScope.$destroy();
+          return typeof callback === "function" ? callback() : void 0;
+        });
+      },
+      hideAll: function() {
+        while (this.popoverList.length) {
+          this.hide();
+        }
+      }
+    };
+    return service;
+  }
+]).config([
+  "popoverViewsProvider", function(popoverViews) {
+    return angular.module("Mac").popover = function(name, options) {
+      var opts;
+      if (popoverViews.registered[name] == null) {
+        opts = {};
+        angular.extend(opts, popoverViews.popoverDefaults, options, {
+          id: name
+        });
+        return popoverViews.registered[name] = opts;
+      }
+    };
+  }
+]);
+
+/*
+@chalk overview
 @name Scroll Spy Service
 
 @description
@@ -12063,13 +12676,15 @@ angular.module("Mac").factory("TableSectionController", [
 ]);
 
 angular.module("Mac").factory("TableRow", function() {
-  var TableRow;
+  var TableRow, guid;
+  guid = 0;
   return TableRow = (function() {
     function TableRow(section, model, cells, cellsMap) {
       this.section = section;
       this.model = model;
       this.cells = cells != null ? cells : [];
       this.cellsMap = cellsMap != null ? cellsMap : {};
+      this.id = "$R" + (guid++);
     }
 
     TableRow.prototype.toJSON = function() {
@@ -12084,13 +12699,15 @@ angular.module("Mac").factory("TableRow", function() {
 });
 
 angular.module("Mac").factory("TableSection", function() {
-  var TableSection;
+  var TableSection, guid;
+  guid = 0;
   return TableSection = (function() {
     function TableSection(controller, table, name, rows) {
       this.table = table;
       this.name = name;
       this.rows = rows != null ? rows : [];
       this.setController(controller);
+      this.id = "$S" + (guid++);
     }
 
     TableSection.prototype.setController = function(controller) {
@@ -12200,28 +12817,27 @@ angular.module("Mac").factory("TableColumnsController", [
         return obj;
       };
 
-      ColumnsController.prototype.reset = function() {
-        this.table.columnsOrder = [];
-        this.table.columns = [];
-        return this.table.columnsMap = {};
-      };
-
       ColumnsController.prototype.set = function(columns) {
-        var colName, column, _i, _len, _results;
-        this.reset();
-        this.table.columnsOrder = columns;
-        _results = [];
+        var colName, column, columnsArray, lastColumnsMap, nextColumnsMap, _i, _len;
+        lastColumnsMap = this.table.columnsMap;
+        nextColumnsMap = {};
+        columnsArray = [];
         for (_i = 0, _len = columns.length; _i < _len; _i++) {
           colName = columns[_i];
-          column = tableComponents.columnFactory(colName);
-          this.table.columnsMap[colName] = column;
-          _results.push(this.table.columns.push(column));
+          column = lastColumnsMap[colName];
+          if (!column) {
+            column = tableComponents.columnFactory(colName);
+          }
+          nextColumnsMap[colName] = columnsArray[columnsArray.length] = column;
         }
-        return _results;
+        this.table.columnsMap = nextColumnsMap;
+        this.table.columnsOrder = columns;
+        this.table.columns = columnsArray;
+        return this.syncOrder();
       };
 
       ColumnsController.prototype.syncOrder = function() {
-        var cells, colName, columns, row, section, sectionName, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
+        var cell, cells, colName, column, columns, row, section, sectionName, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _ref3;
         _ref = this.table.sections;
         for (sectionName in _ref) {
           section = _ref[sectionName];
@@ -12232,7 +12848,12 @@ angular.module("Mac").factory("TableColumnsController", [
             _ref2 = this.table.columnsOrder;
             for (_j = 0, _len1 = _ref2.length; _j < _len1; _j++) {
               colName = _ref2[_j];
-              cells.push(row.cellsMap[colName]);
+              cell = row.cellsMap[colName];
+              if (!cell) {
+                column = this.table.columnsMap[colName];
+                cell = tableComponents.cellFactory(row, column);
+              }
+              cells.push(cell);
             }
             row.cells = cells;
           }
@@ -12334,6 +12955,8 @@ angular.module("Mac").factory("Table", [
         }
         this.sections = {};
         this.columns = [];
+        this.columnsOrder = [];
+        this.columnsMap = {};
         this.columnsCtrl = new TableColumnsController(this);
         this.rowsCtrl = new TableRowsController(this);
         this.dynamicColumns = columns === 'dynamic';
@@ -12360,41 +12983,31 @@ angular.module("Mac").factory("Table", [
       };
 
       Table.prototype.loadModels = function(sectionName, models) {
-        var args, index, model, row, tableModels, toBeInserted, toBeRemoved, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _results;
+        var index, model, orderedRows, removedRows, row, section, tableModels, _i, _j, _len, _len1, _ref;
+        orderedRows = [];
+        tableModels = [];
+        removedRows = [];
+        section = this.sections[sectionName];
         models = convertObjectModelsToArray(models);
-        if ((_ref = this.sections[sectionName]) != null ? _ref.rows.length : void 0) {
-          tableModels = [];
-          toBeRemoved = [];
-          toBeInserted = [];
-          _ref1 = this.sections[sectionName].rows;
-          for (index = _i = 0, _len = _ref1.length; _i < _len; index = ++_i) {
-            row = _ref1[index];
-            if (_ref2 = row.model, __indexOf.call(models, _ref2) < 0) {
-              toBeRemoved.push([sectionName, index]);
-            } else {
-              tableModels.push(row.model);
-            }
+        _ref = section.rows;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          row = _ref[_i];
+          index = models.indexOf(row.model);
+          if (index === -1) {
+            removedRows.push(row);
+          } else {
+            orderedRows[index] = row;
+            tableModels[index] = row.model;
           }
-          toBeRemoved.reverse();
-          for (_j = 0, _len1 = toBeRemoved.length; _j < _len1; _j++) {
-            args = toBeRemoved[_j];
-            this.remove.apply(this, args);
-          }
-          for (index = _k = 0, _len2 = models.length; _k < _len2; index = ++_k) {
-            model = models[index];
-            if (__indexOf.call(tableModels, model) < 0) {
-              toBeInserted.push([sectionName, model, index]);
-            }
-          }
-          _results = [];
-          for (_l = 0, _len3 = toBeInserted.length; _l < _len3; _l++) {
-            args = toBeInserted[_l];
-            _results.push(this.insert.apply(this, args));
-          }
-          return _results;
-        } else {
-          return this.rowsCtrl.set(sectionName, models);
         }
+        for (index = _j = 0, _len1 = models.length; _j < _len1; index = ++_j) {
+          model = models[index];
+          if (__indexOf.call(tableModels, model) < 0) {
+            orderedRows[index] = this.rowsCtrl.make(section, model);
+          }
+        }
+        section.rows = orderedRows;
+        return [section.rows, removedRows];
       };
 
       Table.prototype.loadController = function(sectionName, sectionController) {
@@ -12423,6 +13036,34 @@ angular.module("Mac").factory("Table", [
 
       Table.prototype.blankRow = function() {
         return this.columnsCtrl.blank();
+      };
+
+      Table.prototype.setColumns = function(columns) {
+        var cell, column, row, section, sectionName, _ref, _results;
+        _ref = this.sections;
+        _results = [];
+        for (sectionName in _ref) {
+          section = _ref[sectionName];
+          _results.push((function() {
+            var _i, _len, _ref1, _results1;
+            _ref1 = section.rows;
+            _results1 = [];
+            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+              row = _ref1[_i];
+              _results1.push((function() {
+                var _j, _len1, _results2;
+                _results2 = [];
+                for (_j = 0, _len1 = columns.length; _j < _len1; _j++) {
+                  column = columns[_j];
+                  _results2.push(cell = row.cellMap[column]);
+                }
+                return _results2;
+              })());
+            }
+            return _results1;
+          })());
+        }
+        return _results;
       };
 
       Table.prototype.toJSON = function() {
