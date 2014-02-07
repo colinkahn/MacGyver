@@ -267,7 +267,6 @@ module.controller "ExampleController", [
 
   $scope.tableBodySectionController = class BodySectionController extends TableSectionController
     cellValue: (row, colName) ->
-      console.log colName
       row.model[colName] + "blah blah"
   
   $scope.columns = ['No.', 'Title', 'Original air date']
@@ -278,7 +277,6 @@ module.controller "ExampleController", [
     removedColumns.push $scope.columns.pop()
 
   $scope.addColumn = ->
-    console.log removedColumns
     $scope.columns.push removedColumns.pop()
 
   # Table Performance

@@ -10063,11 +10063,13 @@ macTable
 var buildRows;
 
 buildRows = function(scope, models, sectionName, sectionElement, rowTemplate, cellTemplates, rowCellMaps) {
-  var $el, cell, cellElement, cells, clonedElement, key, lastCellMap, linkerFactory, linkerFn, nScope, nextCellMap, removedRows, row, rows, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _results,
+  var $el, cell, cellElement, cells, clonedElement, key, lastCellMap, linkerFactory, linkerFn, nScope, nextCellMap, row, section, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2, _results,
     _this = this;
-  _ref = scope.table.load(sectionName, models), rows = _ref[0], removedRows = _ref[1];
-  for (_i = 0, _len = rows.length; _i < _len; _i++) {
-    row = rows[_i];
+  scope.table.load(sectionName, models);
+  section = scope.table.sections[sectionName];
+  _ref = section.rows;
+  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+    row = _ref[_i];
     if (row.$element) {
       sectionElement[0].appendChild(row.$element[0]);
     } else {
@@ -10114,9 +10116,10 @@ buildRows = function(scope, models, sectionName, sectionElement, rowTemplate, ce
     }
     rowCellMaps[row.id] = nextCellMap;
   }
+  _ref2 = section.removedRows;
   _results = [];
-  for (_k = 0, _len2 = removedRows.length; _k < _len2; _k++) {
-    row = removedRows[_k];
+  for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+    row = _ref2[_k];
     row.$element.remove();
     row.$scope.$destroy();
     _results.push(delete rowCellMaps[row.id]);
@@ -10605,7 +10608,7 @@ angular.module("Mac").factory("MacTableController", [
         if (!this.table) {
           this.makeTable();
         }
-        return this.table.columnsCtrl.set(columns);
+        return this.table.loadColumns(columns);
       };
 
       return MacTableController;
@@ -11631,7 +11634,6 @@ module.controller("ExampleController", [
       }
 
       BodySectionController.prototype.cellValue = function(row, colName) {
-        console.log(colName);
         return row.model[colName] + "blah blah";
       };
 
@@ -11644,7 +11646,6 @@ module.controller("ExampleController", [
       return removedColumns.push($scope.columns.pop());
     };
     $scope.addColumn = function() {
-      console.log(removedColumns);
       return $scope.columns.push(removedColumns.pop());
     };
     $scope.perfModels = [];
@@ -12779,106 +12780,8 @@ angular.module("Mac").factory("tableComponents", [
   }
 ]);
 
-angular.module("Mac").factory("TableColumnsController", [
-  "tableComponents", function(tableComponents) {
-    var ColumnsController;
-    return ColumnsController = (function() {
-      function ColumnsController(table) {
-        this.table = table;
-      }
-
-      ColumnsController.prototype.blank = function() {
-        var colName, obj, _i, _len, _ref;
-        obj = {};
-        _ref = this.table.columnsOrder;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          colName = _ref[_i];
-          obj[colName] = null;
-        }
-        return obj;
-      };
-
-      ColumnsController.prototype.set = function(columns) {
-        var cell, cells, colName, column, columnsArray, lastColumnsMap, nextColumnsMap, row, section, sectionName, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
-        lastColumnsMap = this.table.columnsMap;
-        nextColumnsMap = {};
-        columnsArray = [];
-        for (_i = 0, _len = columns.length; _i < _len; _i++) {
-          colName = columns[_i];
-          column = lastColumnsMap[colName];
-          if (!column) {
-            column = tableComponents.columnFactory(colName);
-          }
-          nextColumnsMap[colName] = columnsArray[columnsArray.length] = column;
-        }
-        this.table.columnsMap = nextColumnsMap;
-        this.table.columnsOrder = columns;
-        this.table.columns = columnsArray;
-        _ref = this.table.sections;
-        for (sectionName in _ref) {
-          section = _ref[sectionName];
-          _ref1 = section.rows;
-          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-            row = _ref1[_j];
-            cells = [];
-            _ref2 = this.table.columnsOrder;
-            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-              colName = _ref2[_k];
-              cell = row.cellsMap[colName];
-              if (!cell) {
-                column = this.table.columnsMap[colName];
-                cell = tableComponents.cellFactory(row, column);
-              }
-              cells.push(cell);
-            }
-            row.cells = cells;
-          }
-        }
-        columns = [];
-        _ref3 = this.table.columnsOrder;
-        for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-          colName = _ref3[_l];
-          columns.push(this.table.columnsMap[colName]);
-        }
-        return this.table.columns = columns;
-      };
-
-      return ColumnsController;
-
-    })();
-  }
-]);
-
-angular.module("Mac").factory("TableRowsController", [
-  "tableComponents", function(tableComponents) {
-    var RowsController;
-    return RowsController = (function() {
-      function RowsController(table) {
-        this.table = table;
-      }
-
-      RowsController.prototype.make = function(section, model) {
-        var cell, colName, column, row, _i, _len, _ref;
-        row = tableComponents.rowFactory(section, model);
-        _ref = this.table.columnsOrder;
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          colName = _ref[_i];
-          column = this.table.columnsMap[colName];
-          cell = tableComponents.cellFactory(row, column);
-          row.cellsMap[colName] = cell;
-          row.cells.push(cell);
-        }
-        return row;
-      };
-
-      return RowsController;
-
-    })();
-  }
-]);
-
 angular.module("Mac").factory("Table", [
-  "TableColumnsController", "TableRowsController", "tableComponents", function(TableColumnsController, TableRowsController, tableComponents) {
+  "tableComponents", function(tableComponents) {
     var Table, convertObjectModelsToArray;
     convertObjectModelsToArray = function(models) {
       if (models && !angular.isArray(models)) {
@@ -12896,9 +12799,7 @@ angular.module("Mac").factory("Table", [
         this.columns = [];
         this.columnsOrder = [];
         this.columnsMap = {};
-        this.columnsCtrl = new TableColumnsController(this);
-        this.rowsCtrl = new TableRowsController(this);
-        this.columnsCtrl.set(columns);
+        this.loadColumns(columns);
         return;
       }
 
@@ -12914,8 +12815,9 @@ angular.module("Mac").factory("Table", [
           this.loadController(sectionName, controller);
         }
         if (models) {
-          return this.loadModels(sectionName, models);
+          this.loadModels(sectionName, models);
         }
+        return this;
       };
 
       Table.prototype.loadModels = function(sectionName, models) {
@@ -12939,11 +12841,53 @@ angular.module("Mac").factory("Table", [
         for (index = _j = 0, _len1 = models.length; _j < _len1; index = ++_j) {
           model = models[index];
           if (__indexOf.call(tableModels, model) < 0) {
-            orderedRows[index] = this.rowsCtrl.make(section, model);
+            orderedRows[index] = this.newRow(section, model);
           }
         }
         section.rows = orderedRows;
-        return [section.rows, removedRows];
+        return section.removedRows = removedRows;
+      };
+
+      Table.prototype.loadColumns = function(columns) {
+        var cell, cells, colName, column, columnsArray, lastColumnsMap, nextColumnsMap, row, section, sectionName, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+        if (columns == null) {
+          columns = this.columnsOrder;
+        }
+        lastColumnsMap = this.columnsMap;
+        nextColumnsMap = {};
+        columnsArray = [];
+        for (_i = 0, _len = columns.length; _i < _len; _i++) {
+          colName = columns[_i];
+          column = lastColumnsMap[colName];
+          if (!column) {
+            column = tableComponents.columnFactory(colName);
+          }
+          nextColumnsMap[colName] = columnsArray[columnsArray.length] = column;
+        }
+        this.columnsMap = nextColumnsMap;
+        this.columnsOrder = columns;
+        this.columns = columnsArray;
+        _ref = this.sections;
+        for (sectionName in _ref) {
+          section = _ref[sectionName];
+          _ref1 = section.rows;
+          for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+            row = _ref1[_j];
+            cells = [];
+            _ref2 = this.columnsOrder;
+            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+              colName = _ref2[_k];
+              cell = row.cellsMap[colName];
+              if (!cell) {
+                column = this.columnsMap[colName];
+                cell = tableComponents.cellFactory(row, column);
+              }
+              cells.push(cell);
+            }
+            row.cells = cells;
+          }
+        }
+        return this;
       };
 
       Table.prototype.loadController = function(sectionName, sectionController) {
@@ -12953,35 +12897,24 @@ angular.module("Mac").factory("Table", [
       };
 
       Table.prototype.blankRow = function() {
-        return this.columnsCtrl.blank();
+        return this.columnsOrder.reduce(function(row, colName) {
+          row[colName] = null;
+          return row;
+        }, {});
       };
 
-      Table.prototype.setColumns = function(columns) {
-        var cell, column, row, section, sectionName, _ref, _results;
-        _ref = this.sections;
-        _results = [];
-        for (sectionName in _ref) {
-          section = _ref[sectionName];
-          _results.push((function() {
-            var _i, _len, _ref1, _results1;
-            _ref1 = section.rows;
-            _results1 = [];
-            for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-              row = _ref1[_i];
-              _results1.push((function() {
-                var _j, _len1, _results2;
-                _results2 = [];
-                for (_j = 0, _len1 = columns.length; _j < _len1; _j++) {
-                  column = columns[_j];
-                  _results2.push(cell = row.cellMap[column]);
-                }
-                return _results2;
-              })());
-            }
-            return _results1;
-          })());
+      Table.prototype.newRow = function(section, model) {
+        var cell, colName, column, row, _i, _len, _ref;
+        row = tableComponents.rowFactory(section, model);
+        _ref = this.columnsOrder;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          colName = _ref[_i];
+          column = this.columnsMap[colName];
+          cell = tableComponents.cellFactory(row, column);
+          row.cellsMap[colName] = cell;
+          row.cells.push(cell);
         }
-        return _results;
+        return row;
       };
 
       Table.prototype.toJSON = function() {

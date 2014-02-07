@@ -19,9 +19,10 @@ buildRows = (
   cellTemplates
   rowCellMaps
 ) ->
-  [rows, removedRows] = scope.table.load sectionName, models
+  scope.table.load sectionName, models
+  section = scope.table.sections[sectionName]
 
-  for row in rows
+  for row in section.rows
     if row.$element
       sectionElement[0].appendChild row.$element[0]
     else
@@ -70,7 +71,7 @@ buildRows = (
 
     rowCellMaps[row.id] = nextCellMap
 
-  for row in removedRows
+  for row in section.removedRows
     row.$element.remove()
     row.$scope.$destroy()
     delete rowCellMaps[row.id]

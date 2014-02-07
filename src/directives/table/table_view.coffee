@@ -21,7 +21,7 @@ angular.module("Mac").factory "MacTableController", ["Table", (Table) ->
 
     setColumns: (columns) ->
       @makeTable() unless @table
-      @table.columnsCtrl.set columns
+      @table.loadColumns columns
 ]
 
 angular.module("Mac").directive "macTable", [ "MacTableController", (MacTableController) ->

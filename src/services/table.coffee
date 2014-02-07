@@ -68,98 +68,21 @@ angular.module("Mac").factory "tableComponents", [
       return new TableCell(row, column)
 ]
 
-angular.module("Mac").factory "TableColumnsController", [
-  "tableComponents"
-  (
-    tableComponents
-  ) ->
-    class ColumnsController
-      constructor: (@table) ->
-
-      blank: ->
-        # Makes a blank object with our colNames as keys
-        obj = {}
-        for colName in @table.columnsOrder
-          obj[colName] = null
-        obj
-
-      set: (columns) ->
-        lastColumnsMap = @table.columnsMap
-        nextColumnsMap = {}
-        columnsArray   = []
-
-        # Store the order
-        for colName in columns
-          column = lastColumnsMap[colName]
-
-          if not column
-            column = tableComponents.columnFactory colName
-
-          nextColumnsMap[colName] = columnsArray[columnsArray.length] = column
-
-        @table.columnsMap   = nextColumnsMap
-        @table.columnsOrder = columns
-        @table.columns      = columnsArray
-
-        # Function might be better in table...
-        for sectionName, section of @table.sections
-          for row in section.rows
-            cells = []
-            for colName in @table.columnsOrder
-              cell = row.cellsMap[colName]
-              unless cell
-                column = @table.columnsMap[colName]
-                cell   = tableComponents.cellFactory(row, column)
-              cells.push cell
-            row.cells = cells
-        columns = []
-        for colName in @table.columnsOrder
-          columns.push @table.columnsMap[colName]
-        @table.columns = columns
-]
-
-angular.module("Mac").factory "TableRowsController", [
-    "tableComponents"
-    (
-        tableComponents
-    ) ->
-      class RowsController
-        constructor: (@table) ->
-
-        make: (section, model) ->
-          row = tableComponents.rowFactory(section, model)
-          for colName in @table.columnsOrder
-            column                = @table.columnsMap[colName]
-            cell                  = tableComponents.cellFactory(row, column)
-            row.cellsMap[colName] = cell
-            row.cells.push cell
-          row
-]
-
 angular.module("Mac").factory "Table", [
-    "TableColumnsController"
-    "TableRowsController"
     "tableComponents"
-    (
-        TableColumnsController
-        TableRowsController
-        tableComponents
-    ) ->
-      # Helper functions
+    (tableComponents) ->
+
       convertObjectModelsToArray = (models) ->
         if models and not angular.isArray models then [models] else models
 
-      # The Table class
       class Table
         constructor: (columns = []) ->
           @sections           = {}
           @columns            = []
           @columnsOrder       = []
           @columnsMap         = {}
-          @columnsCtrl        = new TableColumnsController(this)
-          @rowsCtrl           = new TableRowsController(this)
 
-          @columnsCtrl.set(columns)
+          @loadColumns(columns)
           return
 
         makeSection: (sectionName) ->
@@ -172,6 +95,8 @@ angular.module("Mac").factory "Table", [
 
           @loadController sectionName, controller if controller
           @loadModels     sectionName, models     if models
+
+          return this
 
         loadModels: (sectionName, models) ->
           orderedRows = []
@@ -189,24 +114,59 @@ angular.module("Mac").factory "Table", [
               tableModels[index] = row.model
 
           for model, index in models when model not in tableModels
-            orderedRows[index] = @rowsCtrl.make section, model
+            orderedRows[index] = @newRow section, model
 
           # Overwrite old rows, rows not in orderedRows get GC'd?
-          section.rows = orderedRows
+          section.rows        = orderedRows
+          section.removedRows = removedRows
 
-          return [section.rows, removedRows]
+        loadColumns: (columns = @columnsOrder) ->
+          lastColumnsMap = @columnsMap
+          nextColumnsMap = {}
+          columnsArray   = []
+
+          for colName in columns
+            column = lastColumnsMap[colName]
+
+            if not column
+              column = tableComponents.columnFactory colName
+
+            nextColumnsMap[colName] = columnsArray[columnsArray.length] = column
+
+          @columnsMap   = nextColumnsMap
+          @columnsOrder = columns
+          @columns      = columnsArray
+
+          for sectionName, section of @sections
+            for row in section.rows
+              cells = []
+              for colName in @columnsOrder
+                cell = row.cellsMap[colName]
+                unless cell
+                  column = @columnsMap[colName]
+                  cell   = tableComponents.cellFactory(row, column)
+                cells.push cell
+              row.cells = cells
+
+          return this
 
         loadController: (sectionName, sectionController) ->
           @sections[sectionName].setController sectionController if sectionController
 
         blankRow: ->
-          @columnsCtrl.blank()
+          @columnsOrder.reduce (row, colName) ->
+            row[colName] = null
+            return row
+          , {}
 
-        setColumns: (columns) ->
-          for sectionName, section of @sections
-            for row in section.rows
-              for column in columns
-                cell = row.cellMap[column]
+        newRow: (section, model) ->
+          row = tableComponents.rowFactory(section, model)
+          for colName in @columnsOrder
+            column                = @columnsMap[colName]
+            cell                  = tableComponents.cellFactory(row, column)
+            row.cellsMap[colName] = cell
+            row.cells.push cell
+          row
 
         toJSON: ->
           sections: @sections

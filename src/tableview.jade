@@ -11,7 +11,7 @@ block append content
 
           table.table.mac-table-default(
             mac-table
-            mac-table-columns="dynamic"
+            mac-table-columns="['No.', 'Title']"
           )
             thead(mac-table-section="header", mac-table-section-blank-row)
               tr(mac-table-row)
@@ -66,10 +66,11 @@ block append content
               table.table.mac-table-default(
                 mac-table
                 mac-table-columns="columns"
+                mac-table-resizable-columns
               )
                 thead(mac-table-section="header", mac-table-section-blank-row)
                   tr(mac-table-row)
-                    th(mac-cell-template="")
+                    th(mac-cell-template="", mac-column-width="auto")
                       span {{cell.column.colName}}
 
                 tbody(

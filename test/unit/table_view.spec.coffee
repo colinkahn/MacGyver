@@ -49,7 +49,7 @@ describe "Table Data", ->
 
     it "can use different columns", ->
       table = @scope.table
-      table.columnsCtrl.set ["abc", "123"]
+      table.loadColumns ["abc", "123"]
       expect(table.sections.body.rows[0].cells[0].column.colName).toBe "abc"
 
     it "sets table on section", ->
@@ -122,7 +122,7 @@ describe "Table Data", ->
       table = @scope.table
       reversedColumns = table.columnsOrder.slice(0)
       reversedColumns.reverse()
-      table.columnsCtrl.set(reversedColumns)
+      table.loadColumns(reversedColumns)
       columns = []
       columns.push cell.column.colName for cell in table.sections.body.rows[0].cells
       expect(columns).toEqual table.columnsOrder
@@ -131,7 +131,7 @@ describe "Table Data", ->
       table = @scope.table
       reversedColumns = table.columnsOrder.slice(0)
       reversedColumns.reverse()
-      table.columnsCtrl.set(reversedColumns)
+      table.loadColumns(reversedColumns)
       stones = [
           {first_name: "Mick", last_name: "Jagger", age: 30}
           {first_name: "Keith", last_name: "Richards", age: 29} ]
