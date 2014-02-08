@@ -264,10 +264,35 @@ module.controller "ExampleController", [
     model.Title
 
   # Table Selectable Rows
+  
+  $scope.sortColumn = (section, colName) ->
+    section.ctrl.reverseSort =
+      if section.ctrl.sortedBy is colName
+        not section.ctrl.reverseSort
+      else
+        false
+
+    section.ctrl.sortedBy    = colName
 
   $scope.tableBodySectionController = class BodySectionController extends TableSectionController
     cellValue: (row, colName) ->
       row.model[colName] + "blah blah"
+
+    getRows: ->
+      return @section.rows unless @sortedBy
+
+      @section.rows.sort (rowA, rowB) =>
+        cellValueA = rowA.cellsMap[@sortedBy].value()
+        cellValueB = rowB.cellsMap[@sortedBy].value()
+
+        if @reverseSort
+          return  1 if cellValueA < cellValueB
+          return -1 if cellValueA > cellValueB
+        else
+          return -1 if cellValueA < cellValueB
+          return  1 if cellValueA > cellValueB
+
+        return  0
   
   $scope.columns = ['No.', 'Title', 'Original air date']
 

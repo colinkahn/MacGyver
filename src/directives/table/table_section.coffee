@@ -21,8 +21,7 @@ buildRows = (
 ) ->
   scope.table.load sectionName, models
   section = scope.table.sections[sectionName]
-
-  for row in section.rows
+  for row in section.ctrl.getRows()
     if row.$element
       sectionElement[0].appendChild row.$element[0]
     else

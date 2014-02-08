@@ -6,6 +6,8 @@ angular.module("Mac").factory "TableSectionController", [ ->
     # Since accessing a models key is useful
     # we keep this as a separate method
     defaultCellValue: (row, colName) -> row.model[colName]
+    # Override this method to add sorting / filtering etc
+    getRows: -> @section.rows
 ]
 
 angular.module("Mac").factory "TableRow", ->

@@ -10007,6 +10007,7 @@ angular.module("Mac").directive("macCellTemplate", [
     return {
       transclude: "element",
       priority: 1000,
+      terminal: true,
       require: ["^macTable", "^macTableSection"],
       compile: function(element, attr, linker) {
         return function($scope, $element, $attr, controllers) {
@@ -10039,7 +10040,9 @@ angular.module("Mac").directive("macTableRow", [
     return {
       require: ["^macTable", "^macTableSection"],
       controller: function() {},
+      terminal: true,
       transclude: "element",
+      priority: 1000,
       compile: function(element, attr) {
         return function($scope, $element, $attr, controllers, $transclude) {
           return controllers[1].rowTemplate = $transclude;
@@ -10067,7 +10070,7 @@ buildRows = function(scope, models, sectionName, sectionElement, rowTemplate, ce
     _this = this;
   scope.table.load(sectionName, models);
   section = scope.table.sections[sectionName];
-  _ref = section.rows;
+  _ref = section.ctrl.getRows();
   for (_i = 0, _len = _ref.length; _i < _len; _i++) {
     row = _ref[_i];
     if (row.$element) {
@@ -11625,6 +11628,10 @@ module.controller("ExampleController", [
     $scope.sortByName = function(model) {
       return model.Title;
     };
+    $scope.sortColumn = function(section, colName) {
+      section.ctrl.reverseSort = section.ctrl.sortedBy === colName ? !section.ctrl.reverseSort : false;
+      return section.ctrl.sortedBy = colName;
+    };
     $scope.tableBodySectionController = BodySectionController = (function(_super) {
       __extends(BodySectionController, _super);
 
@@ -11635,6 +11642,34 @@ module.controller("ExampleController", [
 
       BodySectionController.prototype.cellValue = function(row, colName) {
         return row.model[colName] + "blah blah";
+      };
+
+      BodySectionController.prototype.getRows = function() {
+        var _this = this;
+        if (!this.sortedBy) {
+          return this.section.rows;
+        }
+        return this.section.rows.sort(function(rowA, rowB) {
+          var cellValueA, cellValueB;
+          cellValueA = rowA.cellsMap[_this.sortedBy].value();
+          cellValueB = rowB.cellsMap[_this.sortedBy].value();
+          if (_this.reverseSort) {
+            if (cellValueA < cellValueB) {
+              return 1;
+            }
+            if (cellValueA > cellValueB) {
+              return -1;
+            }
+          } else {
+            if (cellValueA < cellValueB) {
+              return -1;
+            }
+            if (cellValueA > cellValueB) {
+              return 1;
+            }
+          }
+          return 0;
+        });
       };
 
       return BodySectionController;
@@ -12668,6 +12703,10 @@ angular.module("Mac").factory("TableSectionController", [
 
       TableSectionController.prototype.defaultCellValue = function(row, colName) {
         return row.model[colName];
+      };
+
+      TableSectionController.prototype.getRows = function() {
+        return this.section.rows;
       };
 
       return TableSectionController;

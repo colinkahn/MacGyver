@@ -70,8 +70,13 @@ block append content
               )
                 thead(mac-table-section="header", mac-table-section-blank-row)
                   tr(mac-table-row)
-                    th(mac-cell-template="", mac-column-width="auto")
-                      span {{cell.column.colName}}
+                    th(
+                      mac-cell-template=""
+                      mac-column-width="auto"
+                    )
+                      span(
+                        ng-click="sortColumn(table.sections.body, cell.column.colName)"
+                      ) {{cell.column.colName}}
 
                 tbody(
                   mac-table-section                 = "body"

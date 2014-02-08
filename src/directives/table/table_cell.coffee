@@ -13,6 +13,7 @@ macTable, macTableSection, macTableRow
 angular.module("Mac").directive "macCellTemplate", [ ->
   transclude: "element"
   priority:   1000
+  terminal:   true
   require:    ["^macTable", "^macTableSection"]
 
   compile: (element, attr, linker) ->

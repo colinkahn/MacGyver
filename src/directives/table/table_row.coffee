@@ -12,7 +12,9 @@ angular.module("Mac").directive "macTableRow", [
   ->
     require:    ["^macTable", "^macTableSection"]
     controller: ->
+    terminal:   true
     transclude: "element"
+    priority:   1000
 
     compile: (element, attr) ->
       ($scope, $element, $attr, controllers, $transclude) ->
